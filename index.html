@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Risewell</title>
+<meta name="description" content="Wake up, do one tiny thing, keep the streak.">
+<meta name="theme-color" content="#FFC247">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="48x48" href="icons/icon-48.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="preload" href="fonts/nunito.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/app.css">
+<script>
+  // Apply the saved theme before first paint to avoid a flash.
+  try { var t = JSON.parse(localStorage.getItem('risewell') || '{}').theme; if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-sunrise" viewBox="0 0 24 24"><path d="M12 3v3M4.9 7.4l1.4 1.4M19.1 7.4l-1.4 1.4M2 18h20M6 18a6 6 0 0 1 12 0M8 22h8"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 2.5c.8 3.4 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.7 1.3-4.3 2.7-5.3.2 2 1.1 3.1 2 3.6C11.6 9.3 10.9 5.6 12 2.5z"/></symbol>
+  <symbol id="i-snow" viewBox="0 0 24 24"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17M9 4l3 2 3-2M9 20l3-2 3 2"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+  <symbol id="i-window" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 3v18M4 12h16"/></symbol>
+  <symbol id="i-dumbbell" viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></symbol>
+  <symbol id="i-stretch" viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7.5v6.5M5 8.5l7 2 7-2M9 21l3-7 3 7"/></symbol>
+  <symbol id="i-bed" viewBox="0 0 24 24"><path d="M3 19V6M3 15h18v4M21 15v-3a3 3 0 0 0-3-3h-7v6"/><circle cx="7" cy="11.5" r="1.8"/></symbol>
+  <symbol id="i-door" viewBox="0 0 24 24"><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M3 21h18M14.5 12h.01"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9M10 21a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-medal" viewBox="0 0 24 24"><circle cx="12" cy="15" r="5"/><path d="M8.5 11 6 3h4l2 5 2-5h4l-2.5 8"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24"><path d="m3 8 4.5 4L12 5l4.5 7L21 8l-2 11H5z"/></symbol>
+  <symbol id="i-sprout" viewBox="0 0 24 24"><path d="M12 21v-9M12 12C12 8 9 6 5 6c0 4 3 6 7 6zM12 14c0-3 2.5-5 6.5-5 0 3.5-2.5 5-6.5 5"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6M3 20h18"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5a6.5 6.5 0 0 0 10 10z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+</svg>
+
+<main class="app" id="app">
+
+<!-- Welcome (first open only) -->
+<section class="screen sunbg" id="welcome" data-sun>
+  <div class="scene" aria-hidden="true">
+    <svg viewBox="0 0 390 330" preserveAspectRatio="xMidYMax slice">
+      <circle cx="195" cy="200" r="120" fill="#FFE07A" opacity=".45"/>
+      <circle cx="195" cy="200" r="84" fill="#FFE9A0"/>
+      <circle cx="176" cy="190" r="6" fill="#2B1B3D"/><circle cx="214" cy="190" r="6" fill="#2B1B3D"/>
+      <path d="M181 212q14 12 28 0" stroke="#2B1B3D" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M0 262c60-36 120-36 190-8s130 18 200-18v94H0z" fill="#E4572E"/>
+      <path d="M0 294c80-26 150-18 220 0s120 8 170-8v44H0z" fill="#B93A5A"/>
+    </svg>
+  </div>
+  <div class="stack">
+    <p class="t-label" style="color:#4A2A4F">Risewell</p>
+    <h1 class="t-title" style="font-size:32px">Wake up. Do one tiny thing. Keep the streak.</h1>
+    <p class="muted">Tap “I’m Awake”, finish a task that takes under a minute, and your streak grows.</p>
+  </div>
+  <div class="foot"><button class="btn dark" data-go="wake">Get started</button></div>
+</section>
+
+<!-- Onboarding 1: wake goal -->
+<section class="screen" id="wake">
+  <div class="nav"><button class="iconbtn" data-back aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><div class="bar"><i style="width:50%"></i></div><span class="t-cap num center">1 of 2</span></div>
+  <div class="stack" style="gap:8px">
+    <h1 class="t-title">When do you want to wake up?</h1>
+    <p class="muted">Pick a time you can hit on a normal weekday. You can change it later.</p>
+  </div>
+  <div class="card" data-timepicker></div>
+  <div class="hint"><svg class="i"><use href="#i-bell"/></svg><p>Risewell can’t ring alarms. Set an alarm for <b data-bind="goal">7:00 AM</b> in your phone’s Clock app too.</p></div>
+  <div class="foot"><button class="btn" data-go="pick">Continue</button></div>
+</section>
+
+<!-- Onboarding 2: first task -->
+<section class="screen" id="pick">
+  <div class="nav"><button class="iconbtn" data-back aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><div class="bar"><i style="width:100%"></i></div><span class="t-cap num center">2 of 2</span></div>
+  <div class="stack" style="gap:8px">
+    <h1 class="t-title">Pick your tiny task</h1>
+    <p class="muted">Something that gets you out of bed. It takes under a minute.</p>
+  </div>
+  <div class="stack" role="radiogroup" aria-label="Tiny task" data-tasklist></div>
+  <div class="foot"><button class="btn" id="finishSetup">Start my streak</button></div>
+</section>
+
+<!-- Home -->
+<section class="screen tabbed" id="home" data-sun data-tab="home">
+  <div class="hero">
+    <div>
+      <p class="t-cap" data-bind="date">Monday, September 28</p>
+      <h1 class="t-head" data-bind="greeting">Good morning</h1>
+    </div>
+    <div class="ring">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <circle cx="100" cy="100" r="88" fill="rgba(255,246,236,.3)" stroke="rgba(255,246,236,.55)" stroke-width="14"/>
+        <circle id="ring" cx="100" cy="100" r="88" fill="none" stroke="#2B1B3D" stroke-width="14" stroke-linecap="round" stroke-dasharray="552.9" stroke-dashoffset="552.9" style="transition:stroke-dashoffset .8s ease"/>
+      </svg>
+      <div class="in"><span class="t-display num" data-bind="streak">0</span><span class="flameline"><svg class="i sm"><use href="#i-flame"/></svg><span data-bind="streakword">day streak</span></span></div>
+    </div>
+    <p class="t-cap center" data-bind="milestone">7 days to your first badge</p>
+  </div>
+
+  <div class="cta" id="cta"></div>
+
+  <div class="card">
+    <div class="row">
+      <div class="itile"><svg class="i"><use data-task-icon href="#i-drop"/></svg></div>
+      <div class="grow"><p class="t-label">Tiny task</p><p class="t-h3" data-bind="taskname">Drink a glass of water</p></div>
+      <button class="btn text sm" data-go="library">Change</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><p class="t-h3">This week</p><span class="tag num" data-bind="weektag"></span></div>
+    <div class="week" id="week"></div>
+  </div>
+
+  <div class="card list">
+    <button class="li" data-go="schedule"><div class="itile"><svg class="i"><use href="#i-clock"/></svg></div><div class="grow"><p class="t-h3">Wake goal</p><p class="t-cap num"><span data-bind="goal">7:00 AM</span> · <span data-bind="dayslabel">Every day</span></p></div><svg class="i chev"><use href="#i-chev"/></svg></button>
+  </div>
+</section>
+
+<!-- Tiny task -->
+<section class="screen" id="doing">
+  <div class="nav"><button class="iconbtn" data-back aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button><p class="t-head">Tiny task</p><span></span></div>
+  <p class="t-cap center" data-bind="tappedAt">One step left.</p>
+  <div class="bigico"><svg class="i"><use data-task-icon href="#i-drop"/></svg></div>
+  <div class="stack center" style="gap:8px;align-items:center">
+    <h1 class="t-title" data-bind="taskname">Drink a glass of water</h1>
+    <p class="muted" style="max-width:30ch" data-bind="taskdesc"></p>
+    <span class="tag"><svg class="i sm"><use href="#i-clock"/></svg><span data-bind="tasktime"></span></span>
+  </div>
+  <div class="foot">
+    <button class="btn" id="doneTask"><svg class="i"><use href="#i-check"/></svg>Done</button>
+    <button class="btn secondary" id="swapTask"><svg class="i"><use href="#i-swap"/></svg>Swap for another task</button>
+  </div>
+</section>
+
+<!-- Celebration -->
+<section class="screen sunbg" id="celebrate" data-sun>
+  <div class="confetti" id="confetti" aria-hidden="true"></div>
+  <div class="medallion" aria-hidden="true"><svg class="i"><use href="#i-flame"/></svg></div>
+  <div class="stack center" style="gap:4px">
+    <span class="t-display num" style="font-size:72px" data-bind="streak">1</span>
+    <h1 class="t-title" data-bind="streakword">day streak</h1>
+    <p class="muted" style="margin-top:4px" data-bind="celmsg"></p>
+  </div>
+  <div class="suncard">
+    <div class="row"><div class="itile"><svg class="i"><use href="#i-star"/></svg></div><div class="grow"><p class="t-h3">+20 points</p><p class="t-cap num" data-bind="levelhint"></p></div></div>
+    <div class="bar"><i data-bind="levelbar"></i></div>
+  </div>
+  <div class="suncard" id="celextra">
+    <div class="row"><div class="itile"><svg class="i"><use data-cel-icon href="#i-medal"/></svg></div><div class="grow"><p class="t-h3" data-bind="celtitle"></p><p class="t-cap" data-bind="celsub"></p></div></div>
+  </div>
+  <div class="foot">
+    <button class="btn dark" data-reset="home">Continue</button>
+    <button class="btn onsun" id="shareBtn"><svg class="i"><use href="#i-share"/></svg>Share your streak</button>
+  </div>
+</section>
+
+<!-- Streak -->
+<section class="screen tabbed" id="streak" data-tab="streak">
+  <div class="hdr"><h1 class="t-title">Streak</h1></div>
+  <div class="pair">
+    <div class="card"><p class="t-label">Current</p><p><span class="t-display num" style="font-size:40px" data-bind="streak">0</span> <span class="muted" data-bind="dayword">days</span></p></div>
+    <div class="card"><p class="t-label">Longest</p><p><span class="t-display num" style="font-size:40px" data-bind="longest">0</span> <span class="muted" data-bind="longword">days</span></p></div>
+  </div>
+  <div class="card">
+    <div class="card-h">
+      <button class="iconbtn" id="calPrev" aria-label="Previous month"><svg class="i"><use href="#i-back"/></svg></button>
+      <div class="center"><p class="t-h3" data-bind="month">September 2026</p><p class="t-cap num" data-bind="calcount"></p></div>
+      <button class="iconbtn" id="calNext" aria-label="Next month"><svg class="i"><use href="#i-chev"/></svg></button>
+    </div>
+    <div class="cal" id="cal"></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>Woke up</span><span><i style="background:var(--sky)"></i>Freeze used</span><span><i style="background:var(--surface2);border:1.5px solid var(--line)"></i>Missed</span></div>
+  </div>
+  <div class="card">
+    <div class="row"><div class="itile"><svg class="i"><use href="#i-medal"/></svg></div><div class="grow"><p class="t-h3" data-bind="nextbadge"></p><p class="t-cap num" data-bind="nextbadgesub"></p></div></div>
+    <div class="bar"><i data-bind="nextbar"></i></div>
+  </div>
+  <div class="card list">
+    <div class="li"><div class="itile cold"><svg class="i"><use href="#i-snow"/></svg></div><div class="grow"><p class="t-h3" data-bind="freezes">1 streak freeze</p><p class="t-cap">Covers a missed day automatically. Earn one every 14 days.</p></div></div>
+    <button class="li" data-go="stats"><div class="itile"><svg class="i"><use href="#i-chart"/></svg></div><div class="grow"><p class="t-h3">Insights</p><p class="t-cap">Wake times and trends</p></div><svg class="i chev"><use href="#i-chev"/></svg></button>
+  </div>
+</section>
+
+<!-- Wake schedule -->
+<section class="screen" id="schedule">
+  <div class="nav"><button class="iconbtn" data-back aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><p class="t-head">Wake goal</p><span></span></div>
+  <div class="card" data-timepicker></div>
+  <div class="card">
+    <div class="card-h"><p class="t-label">Repeat</p><span class="t-cap" data-bind="dayslabel">Every day</span></div>
+    <div class="days" id="days"></div>
+  </div>
+  <div class="card">
+    <p class="t-label">Wake window</p>
+    <div class="seg" id="winseg" role="radiogroup" aria-label="Wake window">
+      <button role="radio" data-win="15">15 min</button><button role="radio" data-win="30">30 min</button><button role="radio" data-win="60">60 min</button>
+    </div>
+    <p class="t-cap">Tap “I’m Awake” by <b data-bind="close">7:30 AM</b>. Up to 2 hours early also counts.</p>
+  </div>
+  <div class="hint"><svg class="i"><use href="#i-bell"/></svg><p>Risewell can’t ring alarms. Keep a matching alarm for <b data-bind="goal">7:00 AM</b> in your phone’s Clock app.</p></div>
+  <div class="foot"><button class="btn" data-back>Done</button></div>
+</section>
+
+<!-- Task library -->
+<section class="screen" id="library">
+  <div class="nav"><button class="iconbtn" data-back aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><p class="t-head">Tiny task</p><span></span></div>
+  <p class="muted">Do this right after you tap “I’m Awake”. Each one takes under a minute.</p>
+  <div class="stack" role="radiogroup" aria-label="Tiny task" data-tasklist></div>
+  <div class="foot"><button class="btn" data-back>Done</button></div>
+</section>
+
+<!-- Insights -->
+<section class="screen" id="stats">
+  <div class="nav"><button class="iconbtn" data-back aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><p class="t-head">Insights</p><span></span></div>
+  <div id="statsEmpty" class="card" hidden>
+    <div class="row"><div class="itile"><svg class="i"><use href="#i-chart"/></svg></div><div class="grow"><p class="t-h3">Not enough data yet</p><p class="t-cap" data-bind="statsneed"></p></div></div>
+  </div>
+  <div id="statsBody" class="stack" style="gap:16px">
+    <div class="pair">
+      <div class="card"><p class="t-label">Average wake</p><p class="t-head num" style="font-size:28px" data-bind="avgwake">–</p><p class="t-cap">Last 30 days</p></div>
+      <div class="card"><p class="t-label">Hit rate</p><p class="t-head num" style="font-size:28px" data-bind="hitrate">–</p><p class="t-cap">Last 30 days</p></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><p class="t-h3">Minutes after goal</p><span class="tag">Last 7 days</span></div>
+      <div class="chart" id="chart" role="img"></div>
+      <div class="xlab" id="xlab"></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>Within 5 min</span><span><i style="background:var(--rose)"></i>Later</span></div>
+    </div>
+    <div class="card" id="weekendTip" hidden>
+      <div class="row"><div class="itile"><svg class="i"><use href="#i-bulb"/></svg></div><div class="grow"><p class="t-h3">Weekends run late</p><p class="t-cap" data-bind="weekendtxt"></p></div></div>
+      <button class="btn secondary" data-go="schedule">Adjust wake goal</button>
+    </div>
+  </div>
+</section>
+
+<!-- Me -->
+<section class="screen tabbed" id="me" data-tab="me">
+  <div class="hdr"><h1 class="t-title">Me</h1></div>
+  <div class="card">
+    <div class="card-h"><p class="t-h3" data-bind="level">Level 1</p><span class="t-cap num" data-bind="points">0 points</span></div>
+    <div class="bar"><i data-bind="levelbar"></i></div>
+    <p class="t-cap num" data-bind="levelnext"></p>
+  </div>
+  <div class="card">
+    <div class="card-h"><p class="t-h3">Badges</p><span class="t-cap num" data-bind="badgecount"></span></div>
+    <div class="days" style="grid-template-columns:repeat(5,1fr);gap:8px" id="badges"></div>
+  </div>
+  <div class="card list">
+    <button class="li" data-go="schedule"><div class="grow t-h3">Wake goal</div><span class="val num" data-bind="goal">7:00 AM</span><svg class="i chev"><use href="#i-chev"/></svg></button>
+    <button class="li" data-go="library"><div class="grow t-h3">Tiny task</div><span class="val" data-bind="taskname"></span><svg class="i chev"><use href="#i-chev"/></svg></button>
+  </div>
+  <div class="card">
+    <p class="t-label">Theme</p>
+    <div class="seg" id="themeseg" role="radiogroup" aria-label="Theme">
+      <button role="radio" data-theme-set="system">System</button><button role="radio" data-theme-set="light">Light</button><button role="radio" data-theme-set="dark">Dark</button>
+    </div>
+  </div>
+  <div class="card list">
+    <div class="li"><div class="grow"><p class="t-h3">Celebration sound</p><p class="t-cap">Plays a short chime when you finish</p></div><button class="switch" id="soundSw" role="switch" aria-checked="true" aria-label="Celebration sound"></button></div>
+    <button class="li danger" id="resetBtn"><div class="grow t-h3">Delete all data</div><svg class="i"><use href="#i-trash"/></svg></button>
+  </div>
+  <p class="t-cap center">Everything stays on this phone. Risewell works offline.</p>
+</section>
+
+<!-- Share sheet -->
+<div class="sheet" id="shareSheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+    <div class="grab"></div>
+    <div class="card-h"><p class="t-head" id="shareTitle">Share your streak</p><button class="iconbtn" data-close aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <img class="preview" id="shareImg" alt="Image of your current streak">
+    <div class="stack">
+      <button class="btn" id="doShare"><svg class="i"><use href="#i-share"/></svg>Share</button>
+      <button class="btn secondary" id="doSave"><svg class="i"><use href="#i-download"/></svg>Save image</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirmation -->
+<div class="sheet" id="resetSheet" hidden>
+  <div class="panel" role="alertdialog" aria-modal="true" aria-labelledby="resetTitle" aria-describedby="resetDesc">
+    <div class="grab"></div>
+    <div class="row"><div class="itile bad"><svg class="i"><use href="#i-trash"/></svg></div><p class="t-head grow" id="resetTitle">Delete all data?</p></div>
+    <p class="muted" id="resetDesc">Your streak, history, points and badges will be erased from this phone. This can’t be undone.</p>
+    <div class="stack">
+      <button class="btn danger" id="confirmReset">Delete everything</button>
+      <button class="btn secondary" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<nav class="tabbar" id="tabbar" aria-label="Main">
+  <button class="tab" data-tab-go="home"><svg class="i"><use href="#i-sunrise"/></svg>Today</button>
+  <button class="tab" data-tab-go="streak"><svg class="i"><use href="#i-cal"/></svg>Streak</button>
+  <button class="tab" data-tab-go="me"><svg class="i"><use href="#i-user"/></svg>Me</button>
+</nav>
+</main>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

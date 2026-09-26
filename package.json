@@ -1,0 +1,21 @@
+﻿{
+    "name":  "risewell",
+    "version":  "1.0.0",
+    "description":  "Offline wake-up streak game",
+    "main":  "index.js",
+    "scripts":  {
+                    "test":  "node --test tests/logic.test.mjs",
+                    "icons":  "node tools/make-icons.mjs",
+                    "start":  "npx --yes http-server -c-1 -p 8765 .",
+                    "build":  "node tools/build.mjs"
+                },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "devDependencies":  {
+                            "@fontsource-variable/nunito":  "^5.3.0"
+                        },
+    "type":  "module"
+}

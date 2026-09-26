@@ -1,0 +1,684 @@
+<title>Risewell</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap">
+<style>
+/* ---------- Tokens ---------- */
+:root{
+  --page:#F4E4D2;--bg:#FFF8F0;--surface:#FFFFFF;--surface2:#FCEBD9;--line:#F0DDC8;
+  --ink:#2B1B3D;--ink2:#6A5A78;--accent:#FF6B35;--accent-press:#C2410C;--accent-text:#B93A0A;
+  --sun:#FFB627;--rose:#FF8FA3;--sky:#7CCBEA;--good:#1B7F50;--good-bg:#DDF3E7;--on-accent:#2B1B3D;
+  --frame:#2B1B3D;
+  --r-card:20px;--r-ctl:16px;--r-sm:12px;
+  --top:56px;--gut:20px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --page:#110A1D;--bg:#1C1230;--surface:#271A3D;--surface2:#33244C;--line:#3F2E59;
+  --ink:#FFF1E3;--ink2:#C3B2D6;--accent-text:#FFA56E;--good:#6FDCA5;--good-bg:#1F3A33;--frame:#07040D;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --page:#110A1D;--bg:#1C1230;--surface:#271A3D;--surface2:#33244C;--line:#3F2E59;
+  --ink:#FFF1E3;--ink2:#C3B2D6;--accent-text:#FFA56E;--good:#6FDCA5;--good-bg:#1F3A33;--frame:#07040D;color-scheme:dark}
+
+/* ---------- Base ---------- */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--page);color:var(--ink);font:600 15px/1.45 Nunito,system-ui,-apple-system,"Segoe UI",sans-serif;
+  display:flex;flex-direction:column;align-items:center;gap:12px;padding-inline:16px;padding-block:14px}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0;text-align:inherit}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+.num{font-variant-numeric:tabular-nums}
+.i{width:22px;height:22px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.i.sm{width:18px;height:18px}.i.lg{width:28px;height:28px}
+
+/* Type scale: 56 / 28 / 20 / 17 / 15 / 13 / 12 */
+.t-display{font-size:56px;font-weight:900;line-height:1;letter-spacing:-.03em}
+.t-title{font-size:28px;font-weight:900;line-height:1.15;letter-spacing:-.01em;text-wrap:balance}
+.t-head{font-size:20px;font-weight:900;line-height:1.2}
+.t-h3{font-size:17px;font-weight:800;line-height:1.3}
+.t-cap{font-size:13px;font-weight:700;color:var(--ink2)}
+.t-label{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+.muted{color:var(--ink2)}
+.center{text-align:center}
+
+/* ---------- Prototype chrome ---------- */
+.picker{display:flex;gap:6px;overflow-x:auto;max-width:100%;padding:2px 2px 6px;flex:none}
+.chip{flex:none;min-height:40px;padding:0 14px;border-radius:999px;background:var(--surface);border:1.5px solid var(--line);font-weight:800;font-size:13px;color:var(--ink2);white-space:nowrap}
+.chip[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.chip small{opacity:.65;margin-right:6px;font-variant-numeric:tabular-nums}
+.phone{position:relative;width:390px;max-width:100%;flex:1;min-height:0;max-height:844px;background:var(--bg);border-radius:48px;border:10px solid var(--frame);overflow:hidden;box-shadow:0 30px 70px rgba(43,27,61,.28)}
+.sbar{position:absolute;top:0;left:0;right:0;height:44px;padding:0 30px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:800;z-index:6;pointer-events:none;color:var(--ink)}
+.phone.on-sun .sbar{color:#2B1B3D}
+.sbar .batt{width:24px;height:12px;border:2px solid currentColor;border-radius:4px;position:relative;opacity:.9}
+.sbar .batt::after{content:"";position:absolute;inset:1px;right:6px;background:currentColor;border-radius:1px}
+
+/* ---------- Screen layout ---------- */
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:var(--top) var(--gut) 24px;display:none;flex-direction:column;gap:16px;background:var(--bg)}
+.screen.on{display:flex}
+.screen.tabbed{padding-bottom:112px}
+.screen>*{flex:none}
+.foot{margin-top:auto;display:flex;flex-direction:column;gap:12px;padding-top:8px}
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.nav{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;min-height:44px}
+.nav .t-head{text-align:center}
+.iconbtn{width:44px;height:44px;border-radius:50%;background:var(--surface2);display:grid;place-items:center;color:var(--ink)}
+.stack{display:flex;flex-direction:column;gap:12px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row{display:flex;align-items:center;gap:12px}
+.grow{flex:1;min-width:0}
+
+/* ---------- Components ---------- */
+.card{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r-card);padding:16px;display:flex;flex-direction:column;gap:12px;width:100%}
+button.card{text-align:left}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tag{display:inline-flex;align-items:center;gap:4px;min-height:28px;padding:0 10px;border-radius:999px;background:var(--surface2);font-size:12px;font-weight:800;color:var(--ink2);white-space:nowrap}
+.itile{width:44px;height:44px;border-radius:14px;background:var(--surface2);color:var(--accent-text);display:grid;place-items:center;flex:none}
+.itile.good{background:var(--good-bg);color:var(--good)}
+.bar{height:10px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .6s ease}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;padding:0 20px;border-radius:var(--r-ctl);background:var(--accent);color:var(--on-accent);font-weight:900;font-size:17px;box-shadow:0 4px 0 var(--accent-press);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-press)}
+.btn.secondary{background:var(--surface2);color:var(--ink);box-shadow:none}
+.btn.secondary:active{transform:none;opacity:.8}
+.btn.text{background:none;box-shadow:none;color:var(--accent-text);min-height:44px}
+.btn.sm{width:auto;min-height:44px;padding:0 16px;font-size:15px;border-radius:var(--r-sm)}
+.btn[disabled]{opacity:.6;pointer-events:none}
+
+.list{padding-block:0;gap:0}
+.li{display:flex;align-items:center;gap:12px;min-height:60px;width:100%;padding-block:8px}
+.li+.li{border-top:1.5px solid var(--line)}
+.li .val{color:var(--ink2);font-weight:700;text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%}
+.li .chev{color:var(--ink2)}
+
+.switch{width:52px;height:32px;border-radius:99px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.switch::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .15s}
+.switch[aria-checked="true"]{background:var(--accent)}
+.switch[aria-checked="true"]::after{transform:translateX(20px)}
+
+.opt{display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r-card)}
+.opt[aria-checked="true"]{border:2px solid var(--accent);padding:11.5px 15.5px;background:var(--surface2)}
+.opt[aria-checked="true"] .itile{background:var(--surface)}
+.radio{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center}
+.opt[aria-checked="true"] .radio{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--surface2);padding:4px;border-radius:14px}
+.seg button{min-height:44px;border-radius:10px;font-weight:800;color:var(--ink2)}
+.seg button[aria-checked="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(43,27,61,.12)}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.dchip{min-height:44px;border-radius:12px;background:var(--surface2);font-weight:900;font-size:14px;color:var(--ink2)}
+.dchip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.stepper{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.stepper .iconbtn{width:52px;height:52px}
+.time{display:flex;align-items:baseline;justify-content:center;gap:6px}
+.time small{font-size:18px;font-weight:900;color:var(--ink2)}
+
+.avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:14px;color:#2B1B3D;flex:none}
+
+/* ---------- Home ---------- */
+.hero{margin:calc(-1 * var(--top)) calc(-1 * var(--gut)) 0;padding:var(--top) var(--gut) 28px;background:linear-gradient(170deg,#FFC247 0%,#FF8A4C 55%,#FF7A85 100%);color:#2B1B3D;border-radius:0 0 32px 32px;display:flex;flex-direction:column;gap:16px}
+.hero .t-cap,.hero .muted{color:#4A2A4F}
+.ring{position:relative;width:188px;height:188px;align-self:center}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .in{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:4px;text-align:center}
+.flameline{display:flex;align-items:center;gap:4px;font-weight:900;font-size:15px}
+.cta{display:flex;flex-direction:column;gap:10px}
+.deadline{display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:800;color:var(--ink2)}
+.deadline b{color:var(--accent-text)}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.wd{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--ink2)}
+.dot{width:36px;height:36px;border-radius:50%;background:var(--surface2);display:grid;place-items:center;color:var(--on-accent)}
+.dot.done{background:var(--accent)}
+.dot.today{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ink)}
+.tile-top{display:flex;align-items:center;justify-content:space-between;color:var(--ink2)}
+
+/* ---------- Streak calendar ---------- */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px 4px;text-align:center}
+.cal .h{font-size:12px;font-weight:800;color:var(--ink2);padding-bottom:2px}
+.cal .c{width:36px;height:36px;margin:auto;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;color:var(--ink2)}
+.cal .c.done{background:var(--accent);color:var(--on-accent)}
+.cal .c.freeze{background:var(--sky);color:#2B1B3D}
+.cal .c.miss{background:var(--surface2)}
+.cal .c.future{opacity:.45}
+.cal .c.today{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink);color:var(--ink)}
+.cal .c.today.done{color:var(--on-accent)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:12px;font-weight:800;color:var(--ink2)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:50%;display:block}
+
+/* ---------- Insights chart ---------- */
+.chart{position:relative;height:132px;margin-left:28px}
+.grid-l{position:absolute;left:0;right:0;border-top:1.5px dashed var(--line)}
+.grid-l span{position:absolute;left:-28px;top:-9px;font-size:11px;font-weight:800;color:var(--ink2);width:22px;text-align:right}
+.grid-l.base{border-top-style:solid}
+.cols{position:absolute;inset:0;display:flex;align-items:flex-end;gap:10px}
+.col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;font-size:11px;font-weight:800;color:var(--ink2)}
+.col i{display:block;width:100%;max-width:28px;border-radius:6px 6px 0 0;background:var(--accent)}
+.col i.late{background:var(--rose)}
+.xlab{display:flex;gap:10px;margin-left:28px;font-size:12px;font-weight:800;color:var(--ink2)}
+.xlab span{flex:1;text-align:center}
+
+/* ---------- Tiny task ---------- */
+.bigico{width:128px;height:128px;border-radius:50%;background:var(--surface2);color:var(--accent-text);display:grid;place-items:center;align-self:center}
+.bigico .i{width:60px;height:60px;stroke-width:1.8}
+
+/* ---------- Sun screens (welcome / celebrate) ---------- */
+.sunbg{background:linear-gradient(175deg,#FFC247 0%,#FF8A4C 55%,#FF7A85 100%);color:#2B1B3D}
+.sunbg .t-cap,.sunbg .muted{color:#4A2A4F}
+.suncard{background:#FFF6EC;color:#2B1B3D;border-radius:var(--r-card);padding:16px;display:flex;flex-direction:column;gap:10px}
+.suncard .t-cap{color:#6A5A78}
+.suncard .itile{background:#FFE6CC;color:#B93A0A}
+.suncard .bar{background:#FFE6CC}
+.btn.dark{background:#2B1B3D;color:#FFF1E3;box-shadow:0 4px 0 #120A1E}
+.btn.onsun{background:rgba(255,246,236,.55);color:#2B1B3D;box-shadow:none}
+.medallion{width:132px;height:132px;border-radius:50%;background:#FFF6EC;display:grid;place-items:center;align-self:center;color:#E4572E;animation:pop .6s cubic-bezier(.3,1.6,.5,1) both}
+.medallion .i{width:64px;height:64px;fill:#FF6B35;stroke:#C2410C;stroke-width:1.5}
+@keyframes pop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+.confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.conf{position:absolute;top:-20px;width:8px;height:14px;border-radius:2px;animation:fall 2.8s linear infinite}
+@keyframes fall{to{transform:translateY(900px) rotate(540deg)}}
+.sunbg>*:not(.confetti){position:relative}
+.scene{margin:calc(-1 * var(--top)) calc(-1 * var(--gut)) 0;height:330px}
+.scene svg{width:100%;height:100%;display:block}
+
+/* ---------- Tab bar ---------- */
+.tabbar{position:absolute;left:0;right:0;bottom:0;display:none;grid-template-columns:repeat(3,1fr);gap:4px;padding:8px 12px calc(14px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1.5px solid var(--line);z-index:5}
+.tabbar.on{display:grid}
+.tab{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:800;color:var(--ink2);border-radius:14px}
+.tab[aria-current="true"]{color:var(--accent-text);background:var(--surface2)}
+
+/* ---------- Share sheet ---------- */
+.sheet{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,10,30,.55)}
+.panel{background:var(--bg);border-radius:28px 28px 0 0;padding:10px var(--gut) calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:16px;max-height:94%;overflow-y:auto;animation:up .25s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+.grab{width:40px;height:5px;border-radius:9px;background:var(--line);align-self:center}
+.preview{display:block;width:100%;max-width:250px;aspect-ratio:4/5;align-self:center;border-radius:16px;background:var(--surface2);box-shadow:0 10px 30px rgba(43,27,61,.25)}
+.toast{position:absolute;left:var(--gut);right:var(--gut);bottom:28px;z-index:12;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 16px;font-size:14px;font-weight:700;text-align:center}
+
+@media (max-width:500px){
+  body{padding-inline:0;padding-block:8px 0;gap:8px}
+  .picker{padding-inline:12px}
+  .phone{border:0;border-radius:0;max-height:none;width:100%;box-shadow:none}
+  .sbar{display:none}
+  :root{--top:20px;--gut:16px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.conf{display:none}}
+</style>
+
+<!-- Icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-sunrise" viewBox="0 0 24 24"><path d="M12 3v3M4.9 7.4l1.4 1.4M19.1 7.4l-1.4 1.4M2 18h20M6 18a6 6 0 0 1 12 0M8 22h8"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 2.5c.8 3.4 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.7 1.3-4.3 2.7-5.3.2 2 1.1 3.1 2 3.6C11.6 9.3 10.9 5.6 12 2.5z"/></symbol>
+  <symbol id="i-snow" viewBox="0 0 24 24"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17M9 4l3 2 3-2M9 20l3-2 3 2"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+  <symbol id="i-window" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 3v18M4 12h16"/></symbol>
+  <symbol id="i-dumbbell" viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></symbol>
+  <symbol id="i-stretch" viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7.5v6.5M5 8.5l7 2 7-2M9 21l3-7 3 7"/></symbol>
+  <symbol id="i-bed" viewBox="0 0 24 24"><path d="M3 19V6M3 15h18v4M21 15v-3a3 3 0 0 0-3-3h-7v6"/><circle cx="7" cy="11.5" r="1.8"/></symbol>
+  <symbol id="i-door" viewBox="0 0 24 24"><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M3 21h18M14.5 12h.01"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9M10 21a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0M16 4.8a3.2 3.2 0 0 1 0 6.4M17.5 14.5A6 6 0 0 1 21 20"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></symbol>
+  <symbol id="i-medal" viewBox="0 0 24 24"><circle cx="12" cy="15" r="5"/><path d="M8.5 11 6 3h4l2 5 2-5h4l-2.5 8"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24"><path d="m3 8 4.5 4L12 5l4.5 7L21 8l-2 11H5z"/></symbol>
+  <symbol id="i-sprout" viewBox="0 0 24 24"><path d="M12 21v-9M12 12C12 8 9 6 5 6c0 4 3 6 7 6zM12 14c0-3 2.5-5 6.5-5 0 3.5-2.5 5-6.5 5"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6M3 20h18"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5a6.5 6.5 0 0 0 10 10z"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></symbol>
+  <symbol id="i-replay" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+</svg>
+
+<nav class="picker" id="picker" aria-label="Prototype screens"></nav>
+
+<main class="phone" id="phone">
+<div class="sbar" aria-hidden="true"><span class="num">6:52</span><span class="batt"></span></div>
+
+<!-- 01 Welcome -->
+<section class="screen sunbg" id="welcome" data-name="Welcome" data-sun>
+  <div class="scene" aria-hidden="true">
+    <svg viewBox="0 0 390 330" preserveAspectRatio="xMidYMax slice">
+      <circle cx="195" cy="200" r="120" fill="#FFE07A" opacity=".45"/>
+      <circle cx="195" cy="200" r="84" fill="#FFE9A0"/>
+      <circle cx="176" cy="190" r="6" fill="#2B1B3D"/><circle cx="214" cy="190" r="6" fill="#2B1B3D"/>
+      <path d="M181 212q14 12 28 0" stroke="#2B1B3D" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M0 262c60-36 120-36 190-8s130 18 200-18v94H0z" fill="#E4572E"/>
+      <path d="M0 294c80-26 150-18 220 0s120 8 170-8v44H0z" fill="#B93A5A"/>
+    </svg>
+  </div>
+  <div class="stack">
+    <p class="t-label" style="color:#4A2A4F">Risewell</p>
+    <h1 class="t-title" style="font-size:32px">Wake up. Do one tiny thing. Keep the streak.</h1>
+    <p class="muted">Tap “I’m Awake”, finish a task that takes under a minute, and your streak grows.</p>
+  </div>
+  <div class="foot">
+    <button class="btn dark" data-go="wake">Get started</button>
+  </div>
+</section>
+
+<!-- 02 Wake goal -->
+<section class="screen" id="wake" data-name="Wake goal">
+  <div class="nav"><button class="iconbtn" data-back aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><div class="bar"><i style="width:50%"></i></div><span class="t-cap num center">1 of 2</span></div>
+  <div class="stack" style="gap:8px">
+    <h1 class="t-title">When do you want to wake up?</h1>
+    <p class="muted">Pick a time you can hit on a normal weekday. You can change it later.</p>
+  </div>
+  <div class="card">
+    <div class="stepper">
+      <button class="iconbtn" data-time="-15" aria-label="15 minutes earlier"><svg class="i"><use href="#i-minus"/></svg></button>
+      <div class="time"><span class="t-display num" data-bind="wakeH">6:30</span><small data-bind="wakeAP">AM</small></div>
+      <button class="iconbtn" data-time="15" aria-label="15 minutes later"><svg class="i"><use href="#i-plus"/></svg></button>
+    </div>
+    <p class="t-cap center" data-bind="bedhint">For 8 hours of sleep, be in bed by 10:30 PM.</p>
+  </div>
+  <div class="card"><div class="row"><div class="itile"><svg class="i"><use href="#i-clock"/></svg></div><div class="grow"><p class="t-h3">30 minute wake window</p><p class="t-cap">Tap “I’m Awake” between <span data-bind="winrange">6:30 and 7:00 AM</span> to count.</p></div></div></div>
+  <div class="foot"><button class="btn" data-go="pick">Continue</button></div>
+</section>
+
+<!-- 03 First task -->
+<section class="screen" id="pick" data-name="First task">
+  <div class="nav"><button class="iconbtn" data-back aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><div class="bar"><i style="width:100%"></i></div><span class="t-cap num center">2 of 2</span></div>
+  <div class="stack" style="gap:8px">
+    <h1 class="t-title">Pick your tiny task</h1>
+    <p class="muted">Something that gets you out of bed. It takes under a minute.</p>
+  </div>
+  <div class="stack" role="radiogroup" aria-label="Tiny task" data-tasklist="4"></div>
+  <div class="foot"><button class="btn" data-finish>Start my streak</button></div>
+</section>
+
+<!-- 04 Home -->
+<section class="screen tabbed" id="home" data-name="Home" data-sun data-tab="home">
+  <div class="hero">
+    <div>
+      <p class="t-cap">Sunday, September 27</p>
+      <h1 class="t-head">Good morning, Maya</h1>
+    </div>
+    <div class="ring">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <circle cx="100" cy="100" r="88" fill="rgba(255,246,236,.3)" stroke="rgba(255,246,236,.55)" stroke-width="14"/>
+        <circle id="ring" cx="100" cy="100" r="88" fill="none" stroke="#2B1B3D" stroke-width="14" stroke-linecap="round" stroke-dasharray="552.9" stroke-dashoffset="552.9" style="transition:stroke-dashoffset .8s ease"/>
+      </svg>
+      <div class="in"><span class="t-display num" data-bind="streak">12</span><span class="flameline"><svg class="i sm"><use href="#i-flame"/></svg>day streak</span></div>
+    </div>
+    <p class="t-cap center" data-bind="badgehint">2 days to your 14-day badge</p>
+  </div>
+
+  <div class="cta" id="cta"></div>
+
+  <div class="card">
+    <div class="row">
+      <div class="itile"><svg class="i"><use data-bind-icon href="#i-drop"/></svg></div>
+      <div class="grow"><p class="t-label">Today’s task</p><p class="t-h3" data-bind="taskname">Drink a glass of water</p></div>
+      <button class="btn text sm" data-go="library">Change</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><p class="t-h3">This week</p><span class="tag num" data-bind="weektag">6 of 7 days</span></div>
+    <div class="week" id="week"></div>
+  </div>
+
+  <div class="card list">
+    <button class="li" data-go="schedule"><div class="itile"><svg class="i"><use href="#i-bell"/></svg></div><div class="grow"><p class="t-h3">Alarm</p><p class="t-cap num"><span data-bind="wakeFull">6:30 AM</span> · <span data-bind="dayslabel">Every day</span></p></div><svg class="i chev"><use href="#i-chev"/></svg></button>
+  </div>
+</section>
+
+<!-- 05 Tiny task -->
+<section class="screen" id="doing" data-name="Tiny task">
+  <div class="nav"><button class="iconbtn" data-back aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button><p class="t-head">Tiny task</p><span></span></div>
+  <p class="t-cap center">You tapped at 6:52 AM. One step left.</p>
+  <div class="bigico"><svg class="i"><use data-bind-icon href="#i-drop"/></svg></div>
+  <div class="stack center" style="gap:8px;align-items:center">
+    <h1 class="t-title" data-bind="taskname">Drink a glass of water</h1>
+    <p class="muted" style="max-width:30ch" data-bind="taskdesc">Fill a glass, drink it, and come back.</p>
+    <span class="tag"><svg class="i sm"><use href="#i-clock"/></svg><span data-bind="tasktime">About 30 seconds</span></span>
+  </div>
+  <div class="foot">
+    <button class="btn" id="doneTask"><svg class="i"><use href="#i-check"/></svg>Done</button>
+    <button class="btn secondary" id="swapTask"><svg class="i"><use href="#i-swap"/></svg>Swap for another task</button>
+  </div>
+</section>
+
+<!-- 06 Celebration -->
+<section class="screen sunbg" id="celebrate" data-name="Celebration" data-sun>
+  <div class="confetti" id="confetti" aria-hidden="true"></div>
+  <div class="medallion" aria-hidden="true"><svg class="i"><use href="#i-flame"/></svg></div>
+  <div class="stack center" style="gap:4px">
+    <span class="t-display num" style="font-size:72px" data-bind="streak">13</span>
+    <h1 class="t-title">day streak</h1>
+    <p class="muted" style="margin-top:4px">Up at 6:52 AM, 8 minutes before your window closed.</p>
+  </div>
+  <div class="suncard">
+    <div class="row"><div class="itile"><svg class="i"><use href="#i-star"/></svg></div><div class="grow"><p class="t-h3">+20 points</p><p class="t-cap" data-bind="levelhint">Level 4 · 160 points to Level 5</p></div></div>
+    <div class="bar"><i data-bind="levelbar" style="width:68%"></i></div>
+  </div>
+  <div class="suncard">
+    <div class="row"><div class="itile"><svg class="i"><use href="#i-medal"/></svg></div><div class="grow"><p class="t-h3" data-bind="celbadge">1 day to your 14-day badge</p><p class="t-cap">Wake up tomorrow to earn it.</p></div></div>
+  </div>
+  <div class="foot">
+    <button class="btn dark" data-reset="home">Continue</button>
+    <button class="btn onsun" id="shareBtn"><svg class="i"><use href="#i-share"/></svg>Share your streak</button>
+  </div>
+</section>
+
+<!-- 07 Streak -->
+<section class="screen tabbed" id="streak" data-name="Streak" data-tab="streak">
+  <div class="hdr"><h1 class="t-title">Streak</h1></div>
+  <div class="pair">
+    <div class="card"><p class="t-label">Current</p><p><span class="t-display num" style="font-size:40px" data-bind="streak">12</span> <span class="muted">days</span></p></div>
+    <div class="card"><p class="t-label">Longest</p><p><span class="t-display num" style="font-size:40px">31</span> <span class="muted">days</span></p></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><p class="t-h3">September 2026</p><span class="tag num" data-bind="calcount">21 wake-ups</span></div>
+    <div class="cal" id="cal"></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>Woke up</span><span><i style="background:var(--sky)"></i>Freeze used</span><span><i style="background:var(--surface2);border:1.5px solid var(--line)"></i>Missed</span></div>
+  </div>
+  <div class="card">
+    <div class="row"><div class="itile"><svg class="i"><use href="#i-medal"/></svg></div><div class="grow"><p class="t-h3">Next: 14-day badge</p><p class="t-cap num" data-bind="badgehint2">2 days to go</p></div></div>
+    <div class="bar"><i data-bind="badgebar" style="width:86%"></i></div>
+  </div>
+  <div class="card list">
+    <div class="li"><div class="itile"><svg class="i"><use href="#i-snow"/></svg></div><div class="grow"><p class="t-h3">1 streak freeze</p><p class="t-cap">Covers one missed day automatically</p></div></div>
+    <button class="li" data-go="stats"><div class="itile"><svg class="i"><use href="#i-chart"/></svg></div><div class="grow"><p class="t-h3">Insights</p><p class="t-cap">Wake times and trends</p></div><svg class="i chev"><use href="#i-chev"/></svg></button>
+  </div>
+</section>
+
+<!-- 08 Schedule -->
+<section class="screen" id="schedule" data-name="Alarm">
+  <div class="nav"><button class="iconbtn" data-back aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><p class="t-head">Wake schedule</p><span></span></div>
+  <div class="card">
+    <p class="t-label">Wake goal</p>
+    <div class="stepper">
+      <button class="iconbtn" data-time="-15" aria-label="15 minutes earlier"><svg class="i"><use href="#i-minus"/></svg></button>
+      <div class="time"><span class="t-display num" data-bind="wakeH">6:30</span><small data-bind="wakeAP">AM</small></div>
+      <button class="iconbtn" data-time="15" aria-label="15 minutes later"><svg class="i"><use href="#i-plus"/></svg></button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><p class="t-label">Repeat</p><span class="t-cap" data-bind="dayslabel">Every day</span></div>
+    <div class="days" id="days"></div>
+  </div>
+  <div class="card">
+    <p class="t-label">Wake window</p>
+    <div class="seg" id="winseg" role="radiogroup" aria-label="Wake window">
+      <button role="radio" data-win="15">15 min</button><button role="radio" data-win="30">30 min</button><button role="radio" data-win="60">60 min</button>
+    </div>
+    <p class="t-cap">Counts if you tap between <span data-bind="winrange">6:30 and 7:00 AM</span>.</p>
+  </div>
+  <div class="card list">
+    <div class="li"><div class="grow"><p class="t-h3">Gentle alarm</p><p class="t-cap">Volume rises over 2 minutes</p></div><button class="switch" role="switch" aria-checked="true" aria-label="Gentle alarm"></button></div>
+    <div class="li"><div class="grow"><p class="t-h3">Streak warning</p><p class="t-cap">Reminds you 10 minutes before the window closes</p></div><button class="switch" role="switch" aria-checked="true" aria-label="Streak warning"></button></div>
+  </div>
+  <div class="foot"><button class="btn" data-back>Save</button></div>
+</section>
+
+<!-- 09 Task library -->
+<section class="screen" id="library" data-name="Task library">
+  <div class="nav"><button class="iconbtn" data-back aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><p class="t-head">Tiny task</p><span></span></div>
+  <p class="muted">Do this right after you tap “I’m Awake”. Each one takes under a minute.</p>
+  <div class="stack" role="radiogroup" aria-label="Tiny task" data-tasklist="6"></div>
+  <div class="foot"><button class="btn" data-back>Save</button></div>
+</section>
+
+<!-- 10 Insights -->
+<section class="screen" id="stats" data-name="Insights">
+  <div class="nav"><button class="iconbtn" data-back aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><p class="t-head">Insights</p><span></span></div>
+  <div class="pair">
+    <div class="card"><p class="t-label">Average wake</p><p class="t-head num" style="font-size:28px">6:38 AM</p><p class="t-cap" style="color:var(--good)">8 min earlier than August</p></div>
+    <div class="card"><p class="t-label">Hit rate</p><p class="t-head num" style="font-size:28px">84%</p><p class="t-cap">Last 30 days</p></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><p class="t-h3">Minutes after goal</p><span class="tag">Last 7 days</span></div>
+    <div class="chart" role="img" aria-label="Minutes after your 6:30 AM goal. Monday 2, Tuesday 0, Wednesday 11, Thursday 4, Friday 1, Saturday 18, Sunday 22.">
+      <div class="grid-l base" style="bottom:0"><span>0</span></div>
+      <div class="grid-l" style="bottom:40px"><span>10</span></div>
+      <div class="grid-l" style="bottom:80px"><span>20</span></div>
+      <div class="cols" id="cols"></div>
+    </div>
+    <div class="xlab"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>Within 5 min</span><span><i style="background:var(--rose)"></i>Later</span></div>
+  </div>
+  <div class="card">
+    <div class="row"><div class="itile"><svg class="i"><use href="#i-bulb"/></svg></div><div class="grow"><p class="t-h3">Weekends run late</p><p class="t-cap">You wake 20 minutes after your goal on Saturdays and Sundays. A 60 minute window on weekends may fit better.</p></div></div>
+    <button class="btn secondary" data-go="schedule">Adjust schedule</button>
+  </div>
+</section>
+
+<!-- 12 Me -->
+<section class="screen tabbed" id="me" data-name="Profile" data-tab="me">
+  <div class="hdr"><h1 class="t-title">Me</h1></div>
+  <div class="row"><div class="avatar" style="background:#FFB627;width:64px;height:64px;font-size:22px">MR</div><div class="grow"><p class="t-head">Maya Reyes</p><p class="t-cap">Early Bird since August</p></div></div>
+  <div class="card">
+    <div class="card-h"><p class="t-h3">Level 4</p><span class="t-cap num" data-bind="points">320 points</span></div>
+    <div class="bar"><i data-bind="levelbar" style="width:64%"></i></div>
+    <p class="t-cap num" data-bind="levelhint2">180 points to Level 5</p>
+  </div>
+  <div class="card">
+    <div class="card-h"><p class="t-h3">Badges</p><span class="t-cap">3 of 5</span></div>
+    <div class="days" style="grid-template-columns:repeat(5,1fr);gap:8px" id="badges"></div>
+  </div>
+  <div class="card list">
+    <button class="li" data-go="schedule"><div class="grow t-h3">Wake schedule</div><span class="val num" data-bind="wakeFull">6:30 AM</span><svg class="i chev"><use href="#i-chev"/></svg></button>
+    <button class="li" data-go="library"><div class="grow t-h3">Tiny task</div><span class="val" data-bind="taskname">Drink a glass of water</span><svg class="i chev"><use href="#i-chev"/></svg></button>
+  </div>
+  <div class="card list">
+    <div class="li"><div class="grow t-h3">Dark theme</div><button class="switch" id="themeSw" role="switch" aria-checked="false" aria-label="Dark theme"></button></div>
+    <div class="li"><div class="grow t-h3">Celebration sounds</div><button class="switch" role="switch" aria-checked="true" aria-label="Celebration sounds"></button></div>
+    <div class="li"><div class="grow t-h3">Streak reminders</div><button class="switch" role="switch" aria-checked="true" aria-label="Streak reminders"></button></div>
+  </div>
+  <div class="card list">
+    <button class="li" data-reset="welcome"><div class="grow t-h3">Replay onboarding</div><svg class="i chev"><use href="#i-chev"/></svg></button>
+  </div>
+</section>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="grab"></div>
+    <div class="card-h"><p class="t-head" id="sheetTitle">Share your streak</p><button class="iconbtn" id="sheetClose" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <img class="preview" id="shareImg" alt="Streak card image showing your current streak">
+    <div class="stack">
+      <button class="btn" id="doShare"><svg class="i"><use href="#i-share"/></svg>Share</button>
+      <button class="btn secondary" id="doSave"><svg class="i"><use href="#i-download"/></svg>Save image</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<nav class="tabbar" id="tabbar" aria-label="Main">
+  <button class="tab" data-tab-go="home"><svg class="i"><use href="#i-sunrise"/></svg>Today</button>
+  <button class="tab" data-tab-go="streak"><svg class="i"><use href="#i-cal"/></svg>Streak</button>
+  <button class="tab" data-tab-go="me"><svg class="i"><use href="#i-user"/></svg>Me</button>
+</nav>
+</main>
+
+<script>
+(function(){
+  var NOW=6*60+52; // 6:52 AM, Sunday Sep 27 2026
+  var S={awake:false,streak:12,task:'water',goal:390,win:30,days:[1,1,1,1,1,1,1],points:320};
+  var TASKS=[
+    {id:'water',icon:'drop',n:'Drink a glass of water',d:'Fill a glass, drink it, and come back.',t:'About 30 seconds'},
+    {id:'curtains',icon:'window',n:'Open the curtains',d:'Let daylight hit your face for a moment.',t:'About 10 seconds'},
+    {id:'pushups',icon:'dumbbell',n:'Do 10 push-ups',d:'Get your blood moving. Knee push-ups count.',t:'About 45 seconds'},
+    {id:'stretch',icon:'stretch',n:'Stretch for one minute',d:'Reach up high, then slowly touch your toes.',t:'About 60 seconds'},
+    {id:'bed',icon:'bed',n:'Make your bed',d:'Smooth the sheet and straighten the pillow.',t:'About 40 seconds'},
+    {id:'outside',icon:'door',n:'Step outside',d:'Open the door and take five slow breaths.',t:'About 30 seconds'}
+  ];
+  var DL=['M','T','W','T','F','S','S'],DN=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  var ORDER=['welcome','wake','pick','home','doing','celebrate','streak','schedule','library','stats','me'];
+  var $=function(s){return document.querySelector(s)},$$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
+  var ic=function(n,c){return '<svg class="i'+(c?' '+c:'')+'"><use href="#i-'+n+'"/></svg>'};
+  var stack=[],KEY='risewell.v1';
+  function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'{}');['onboarded','goal','task','win','days'].forEach(function(k){if(d[k]!==undefined)S[k]=d[k]})}catch(e){}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify({onboarded:!!S.onboarded,goal:S.goal,task:S.task,win:S.win,days:S.days}))}catch(e){}}
+  function finish(){S.onboarded=true;save();reset('home')}
+  load();
+
+  function t12(min){min=((min%1440)+1440)%1440;var h=Math.floor(min/60),m=min%60;return {hm:(h%12||12)+':'+(m<10?'0':'')+m,ap:h<12?'AM':'PM'}}
+  function fmt(min){var t=t12(min);return t.hm+' '+t.ap}
+  function range(a,b){var x=t12(a),y=t12(b);return x.ap===y.ap?x.hm+' and '+y.hm+' '+y.ap:fmt(a)+' and '+fmt(b)}
+  function task(){for(var i=0;i<TASKS.length;i++)if(TASKS[i].id===S.task)return TASKS[i]}
+  function daysLabel(){var d=S.days,n=d.reduce(function(a,b){return a+b},0);
+    if(n===7)return 'Every day';if(n===0)return 'Off';
+    if(n===5&&d[0]&&d[1]&&d[2]&&d[3]&&d[4])return 'Weekdays';if(n===2&&d[5]&&d[6])return 'Weekends';
+    return d.map(function(v,i){return v?['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]:''}).filter(Boolean).join(', ')}
+  function set(key,fn){$$('[data-bind="'+key+'"]').forEach(function(e){fn(e)})}
+  function txt(key,v){set(key,function(e){e.textContent=v})}
+
+  // Prototype screen picker
+  ORDER.forEach(function(id,ix){var b=document.createElement('button');b.className='chip';b.dataset.reset=id;
+    b.innerHTML='<small>'+(ix<9?'0':'')+(ix+1)+'</small>'+document.getElementById(id).dataset.name;$('#picker').appendChild(b)});
+  var fr=document.createElement('button');fr.className='chip';fr.id='firstOpen';fr.innerHTML='<small>↺</small>Simulate first open';$('#picker').insertBefore(fr,$('#picker').firstChild);
+
+  function show(id){
+    var sc=document.getElementById(id);
+    $$('.screen').forEach(function(s){s.classList.toggle('on',s===sc)});
+    sc.scrollTop=0;
+    $('#phone').classList.toggle('on-sun',sc.hasAttribute('data-sun'));
+    var tab=sc.dataset.tab;$('#tabbar').classList.toggle('on',!!tab);
+    $$('.tab').forEach(function(t){t.setAttribute('aria-current',String(t.dataset.tabGo===tab))});
+    $$('.chip').forEach(function(c){c.setAttribute('aria-current',String(c.dataset.reset===id))});
+    var c=$('.chip[data-reset="'+id+'"]');if(c&&c.scrollIntoView)c.scrollIntoView({inline:'center',block:'nearest'});
+    if(id==='celebrate')confetti();
+    $('#sheet').hidden=true;$('#toast').hidden=true;
+    render();
+  }
+  function go(id){stack.push(id);show(id)}
+  function reset(id){stack=[id];show(id)}
+  function back(){stack.pop();show(stack.length?stack[stack.length-1]:(stack=['home'],'home'))}
+
+  function confetti(){var box=$('#confetti'),cols=['#2B1B3D','#FFF6EC','#FF8FA3','#7CCBEA','#E4572E'];box.innerHTML='';
+    for(var i=0;i<24;i++){var e=document.createElement('i');e.className='conf';e.style.left=(4+Math.random()*92)+'%';e.style.background=cols[i%cols.length];
+      e.style.animationDelay=(-Math.random()*2.8)+'s';e.style.animationDuration=(2.2+Math.random()*1.6)+'s';box.appendChild(e)}}
+
+  function render(){
+    var t=task(),end=S.goal+S.win,left=end-NOW,tg=t12(S.goal),toBadge=Math.max(0,14-S.streak);
+    txt('streak',S.streak);txt('wakeH',tg.hm);txt('wakeAP',tg.ap);txt('wakeFull',fmt(S.goal));
+    txt('winrange',range(S.goal,end));txt('bedhint','For 8 hours of sleep, be in bed by '+fmt(S.goal-480)+'.');
+    txt('dayslabel',daysLabel());
+    txt('taskname',t.n);txt('taskdesc',t.d);txt('tasktime',t.t);
+    $$('[data-bind-icon]').forEach(function(u){u.setAttribute('href','#i-'+t.icon)});
+    txt('badgehint',toBadge?toBadge+(toBadge===1?' day':' days')+' to your 14-day badge':'14-day badge earned');
+    txt('badgehint2',toBadge?toBadge+(toBadge===1?' day':' days')+' to go':'Earned today');
+    set('badgebar',function(e){e.style.width=Math.min(100,S.streak/14*100)+'%'});
+    txt('celbadge',toBadge+(toBadge===1?' day':' days')+' to your 14-day badge');
+    $('#ring').style.strokeDashoffset=(552.9*(1-Math.min(1,S.streak/14))).toFixed(1);
+    var lv=S.points/500*100;set('levelbar',function(e){e.style.width=lv+'%'});
+    txt('points',S.points+' points');txt('levelhint2',(500-S.points)+' points to Level 5');txt('levelhint','Level 4 · '+(500-S.points)+' points to Level 5');
+
+    // Home call to action
+    var cta=$('#cta');
+    if(S.awake){cta.innerHTML='<div class="card"><div class="row"><div class="itile good">'+ic('check')+'</div><div class="grow"><p class="t-h3">Streak secured</p><p class="t-cap">Up at 6:52 AM. See you tomorrow.</p></div></div></div>'}
+    else{
+      var msg=NOW<S.goal?'Window opens at <b>'+fmt(S.goal)+'</b>':left>0?'Tap by '+fmt(end)+' · <b>'+left+' min left</b>':'<b>Window closed at '+fmt(end)+'</b>';
+      cta.innerHTML='<p class="deadline">'+ic('clock','sm')+'<span>'+msg+'</span></p><button class="btn" style="min-height:64px;font-size:19px" data-go="doing">'+ic('sun')+'I’m Awake</button>'}
+
+    // Week strip, Mon Sep 21 to Sun Sep 27
+    var w='';for(var i=0;i<7;i++){var done=i<6||S.awake,today=i===6;
+      w+='<div class="wd"><span>'+DL[i]+'</span><span class="dot'+(done?' done':'')+(today?' today':'')+'" role="img" aria-label="'+DN[i]+(done?', woke up':', not yet')+'">'+(done?ic('check','sm'):'')+'</span></div>'}
+    $('#week').innerHTML=w;txt('weektag',(S.awake?7:6)+' of 7 days');
+
+    // Task pickers
+    $$('[data-tasklist]').forEach(function(box){var h='';TASKS.slice(0,+box.dataset.tasklist).forEach(function(x){
+      h+='<button class="opt" role="radio" aria-checked="'+(x.id===S.task)+'" data-task="'+x.id+'"><div class="itile">'+ic(x.icon)+'</div><div class="grow"><p class="t-h3">'+x.n+'</p><p class="t-cap">'+x.t+'</p></div><span class="radio">'+(x.id===S.task?ic('check','sm'):'')+'</span></button>'});box.innerHTML=h});
+
+    // Calendar, Sep 1 2026 is a Tuesday
+    var miss={2:1,7:1,8:1,13:1},frz={14:1},c='',count=0;
+    DL.forEach(function(d){c+='<div class="h">'+d+'</div>'});c+='<div></div>';
+    for(var d=1;d<=30;d++){var cls='c',lab='';
+      if(d<27){if(frz[d]){cls+=' freeze';lab='freeze used'}else if(miss[d]){cls+=' miss';lab='missed'}else{cls+=' done';lab='woke up';count++}}
+      else if(d===27){cls+=' today'+(S.awake?' done':'');lab=S.awake?'today, woke up':'today';if(S.awake)count++}
+      else{cls+=' future'}
+      c+='<div class="'+cls+'" aria-label="September '+d+(lab?', '+lab:'')+'">'+d+'</div>'}
+    $('#cal').innerHTML=c;txt('calcount',count+' wake-ups');
+
+    // Schedule controls
+    $('#days').innerHTML=DL.map(function(d,i){return '<button class="dchip" data-day="'+i+'" aria-pressed="'+!!S.days[i]+'" aria-label="'+DN[i]+'">'+d+'</button>'}).join('');
+    $$('#winseg button').forEach(function(b){b.setAttribute('aria-checked',String(+b.dataset.win===S.win))});
+
+    // Insights chart (4px per minute)
+    $('#cols').innerHTML=[2,0,11,4,1,18,22].map(function(v){return '<div class="col"><span class="num">'+(v?'+'+v:'0')+'</span><i class="'+(v>5?'late':'')+'" style="height:'+Math.max(4,v*4)+'px"></i></div>'}).join('');
+
+    // Badges
+    var B=[['sprout','7 days',1],['sunrise','First 6 AM',1],['snow','Freeze saver',1],['medal','14 days',S.streak>=14],['crown','30 days',0]];
+    $('#badges').innerHTML=B.map(function(b){return '<div class="stack" style="gap:6px;align-items:center;text-align:center'+(b[2]?'':';opacity:.45')+'"><div class="itile" style="width:48px;height:48px">'+ic(b[2]?b[0]:'lock')+'</div><span class="t-cap" style="font-size:11px;line-height:1.2">'+b[1]+'</span></div>'}).join('');
+
+    var dark=document.documentElement.dataset.theme?document.documentElement.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+    $('#themeSw').setAttribute('aria-checked',String(dark));
+  }
+
+  // Share image (1080 x 1350)
+  var shareBlob=null,toastT,BLOCKED='Sharing is blocked in this preview. Long-press or right-click the image to save it.';
+  function toast(m){var t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true},4200)}
+  function drawCard(){
+    var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d'),ink='#2B1B3D';
+    var g=x.createLinearGradient(0,0,W*.35,H);g.addColorStop(0,'#FFC247');g.addColorStop(.55,'#FF8A4C');g.addColorStop(1,'#FF7A85');x.fillStyle=g;x.fillRect(0,0,W,H);
+    x.fillStyle='rgba(255,233,160,.45)';x.beginPath();x.arc(W/2,560,390,0,7);x.fill();
+    x.fillStyle='#FFF6EC';x.beginPath();x.arc(W/2,560,310,0,7);x.fill();
+    x.fillStyle='#E4572E';x.beginPath();x.moveTo(0,1110);x.bezierCurveTo(260,990,520,1000,760,1070);x.bezierCurveTo(900,1110,1000,1080,W,1030);x.lineTo(W,H);x.lineTo(0,H);x.fill();
+    x.fillStyle='#B93A5A';x.beginPath();x.moveTo(0,1220);x.bezierCurveTo(300,1140,600,1160,820,1210);x.bezierCurveTo(950,1240,1020,1220,W,1200);x.lineTo(W,H);x.lineTo(0,H);x.fill();
+    x.save();x.translate(W/2-52,300);x.scale(104/24,104/24);var f=new Path2D('M12 2.5c.8 3.4 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.7 1.3-4.3 2.7-5.3.2 2 1.1 3.1 2 3.6C11.6 9.3 10.9 5.6 12 2.5z');
+    x.fillStyle='#FF6B35';x.fill(f);x.lineWidth=1.2;x.strokeStyle='#C2410C';x.stroke(f);x.restore();
+    x.textAlign='center';x.fillStyle=ink;
+    x.font='900 250px Nunito, sans-serif';x.fillText(String(S.streak),W/2,690);
+    x.font='900 64px Nunito, sans-serif';x.fillText('day streak',W/2,775);
+    try{x.letterSpacing='8px'}catch(e){}x.font='900 40px Nunito, sans-serif';x.fillText('RISEWELL',W/2,130);try{x.letterSpacing='0px'}catch(e){}
+    var y=940,step=112,x0=W/2-3*step;
+    for(var i=0;i<7;i++){var done=i<6||S.awake,cx=x0+i*step;x.beginPath();x.arc(cx,y,38,0,7);x.fillStyle=done?ink:'rgba(255,246,236,.55)';x.fill();
+      if(done){x.strokeStyle='#FFC247';x.lineWidth=8;x.lineCap='round';x.lineJoin='round';x.beginPath();x.moveTo(cx-15,y+1);x.lineTo(cx-4,y+12);x.lineTo(cx+16,y-11);x.stroke()}}
+    x.fillStyle='#FFF6EC';x.font='800 40px Nunito, sans-serif';x.fillText('September 27, 2026'+(S.awake?' · Up at 6:52 AM':''),W/2,1295);
+    return c;
+  }
+  function openShare(){
+    $('#sheet').hidden=false;
+    var go=function(){drawCard().toBlob(function(b){shareBlob=b;var img=$('#shareImg');if(img.src)URL.revokeObjectURL(img.src);img.src=URL.createObjectURL(b)},'image/png')};
+    try{document.fonts.load('900 100px Nunito').then(go,go)}catch(e){go()}
+  }
+  function closeShare(){$('#sheet').hidden=true}
+  function doShare(){
+    var file=shareBlob&&new File([shareBlob],'risewell-streak-'+S.streak+'.png',{type:'image/png'});
+    if(file&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:S.streak+' day streak'}).catch(function(err){if(err&&err.name!=='AbortError')toast(BLOCKED)})}
+    else toast(BLOCKED);
+  }
+  $('#sheet').addEventListener('click',function(e){if(e.target===this)closeShare()});
+
+  document.addEventListener('click',function(e){
+    var el=e.target.closest('button');if(!el||el.disabled)return;
+    var d=el.dataset;
+    if(el.id==='firstOpen'){try{localStorage.removeItem(KEY)}catch(x){}S.onboarded=false;S.goal=390;S.task='water';S.win=30;S.days=[1,1,1,1,1,1,1];return reset('welcome')}
+    if('finish' in d)return finish();
+    if(el.id==='shareBtn')return openShare();
+    if(el.id==='sheetClose')return closeShare();
+    if(el.id==='doShare')return doShare();
+    if(el.id==='doSave')return toast('In the app this saves to your photos. In this preview, long-press or right-click the image.');
+    if(d.time){S.goal=((S.goal+ +d.time)%1440+1440)%1440;save();return render()}
+    if(d.task){S.task=d.task;save();return render()}
+    if(d.day!==undefined){S.days[+d.day]=S.days[+d.day]?0:1;save();return render()}
+    if(d.win){S.win=+d.win;save();return render()}
+    if(el.id==='themeSw'){var on=el.getAttribute('aria-checked')==='true';document.documentElement.setAttribute('data-theme',on?'light':'dark');return render()}
+    if(el.classList.contains('switch')){el.setAttribute('aria-checked',String(el.getAttribute('aria-checked')!=='true'));return}
+    if(el.id==='doneTask'){if(!S.awake){S.awake=true;S.streak++;S.points+=20}stack=['home','celebrate'];return show('celebrate')}
+    if(el.id==='swapTask'){var ix=0;TASKS.forEach(function(x,i){if(x.id===S.task)ix=i});S.task=TASKS[(ix+1)%TASKS.length].id;save();return render()}
+    if(d.go){if(d.go==='doing'&&S.awake)return;return go(d.go)}
+    if(d.tabGo)return reset(d.tabGo);
+    if(d.reset)return reset(d.reset);
+    if('back' in d)return back();
+  });
+
+  reset(S.onboarded?'home':'welcome');
+})();
+</script>
