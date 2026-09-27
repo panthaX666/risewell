@@ -143,3 +143,11 @@ test('a goal edit before the window opens applies today', () => {
   assert.equal(st.lock, null);
   assert.equal(todayStatus(st, at(0, 8, 31)).kind, 'closed');
 });
+
+test('a tap under a locked schedule records the locked goal', () => {
+  const st = Object.assign(defaultState(), { goal: 540 });
+  finishOnboarding(st, at(-1, 12));
+  editSchedule(st, at(0, 8), { goal: 420 });
+  tapAwake(st, at(0, 8, 10));
+  assert.equal(st.history[dayKey(at(0, 0))].goal, 540);
+});

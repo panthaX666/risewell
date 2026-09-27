@@ -164,7 +164,7 @@ export function todayStatus(st, now) {
 export function tapAwake(st, now) {
   const s = todayStatus(st, now);
   if (s.kind !== 'open') return false;
-  st.history[s.day] = { status: 'awake', t: s.now, goal: st.goal };
+  st.history[s.day] = { status: 'awake', t: s.now, goal: scheduleFor(st, s.day).goal };
   return true;
 }
 
