@@ -24,6 +24,11 @@ function save() {
   try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { toast('Could not save. Check that storage is not full.'); }
 }
 
+// Ask the browser not to clear Risewell's data when the phone runs low on space.
+function keepData() {
+  navigator.storage?.persisted?.().then((kept) => kept || navigator.storage.persist()).catch(() => {});
+}
+
 // `?now=2026-09-28T06:40` pins the clock, for testing a morning at any hour.
 const pinned = new URLSearchParams(location.search).get('now');
 const offset = pinned && !isNaN(Date.parse(pinned)) ? Date.parse(pinned) - Date.now() : 0;
@@ -455,7 +460,7 @@ document.addEventListener('click', (e) => {
   if (d.themeSet) { st.theme = d.themeSet; save(); applyTheme(); return render(); }
   if ('close' in d) return closeSheets();
   switch (el.id) {
-    case 'finishSetup': finishOnboarding(st, now()); save(); return reset('home');
+    case 'finishSetup': finishOnboarding(st, now()); save(); keepData(); return reset('home');
     case 'awakeBtn': if (tapAwake(st, now())) { save(); go('doing'); } else render(); return;
     case 'doneTask': {
       const r = completeTask(st, now());
@@ -506,6 +511,7 @@ history.replaceState({ d: 1 }, '');
 stack = [st.onboarded ? 'home' : 'welcome'];
 show(stack[0]);
 tick();
+if (st.onboarded) keepData();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
