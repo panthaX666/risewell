@@ -192,6 +192,11 @@ function renderHome(n, today, s, streak) {
       html = card('sunrise', '', 'Your streak starts tomorrow', `Tap “I’m Awake” by ${formatTime(windowOf(st).close)}.`);
       break;
   }
+  // In the evening, once today is decided, remind about tomorrow's alarm.
+  if (hour >= 18 && ['done', 'off', 'freeze', 'miss'].includes(s.kind)) {
+    const next = nextWakeLabel(today), bed = next.startsWith('Tomorrow') ? `In bed by ${formatTime(st.goal - 480)}. ` : '';
+    html += card('bell', '', `Next wake: ${next}`, `${bed}Check your alarm in the Clock app.`);
+  }
   $('#cta').innerHTML = html;
   $('#notice').hidden = !st.notice;
   if (st.notice) {
