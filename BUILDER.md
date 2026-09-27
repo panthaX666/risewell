@@ -32,5 +32,9 @@ If you could not verify something, for example offline behaviour that needs a re
 
 ## Commit and report
 
-- Make one commit per item, with a message like `Fix streak reset across month end (R3)`. Do not push. Pushing needs the owner's GitHub sign-in, so tell them to run `git push` when they are ready.
+- Work on a new branch off an up-to-date `main` (run `git pull` on `main` first), for example `fix/reviewer-round-1`. Never commit straight to `main` unless the owner says so.
+- Make one commit per item, with a message like `Fix streak reset across month end (R3)`. Do not add attribution lines such as "Co-Authored-By" or "Generated with Claude Code".
+- When all items are done and tests pass, **ask the owner before pushing**. Say which branch, how many commits, and that you will open a pull request. Wait for a clear yes.
+- After a yes: push the branch and open a pull request into `main` with the GitHub CLI (`gh pr create`; on this machine it is at `C:\Program Files\GitHub CLI\gh.exe` if `gh` is not on PATH). The PR description lists each item, what changed, and how it was verified. Share the PR link. **Do not merge.** The owner reviews and merges, or asks you to.
+- If the owner's message already says to push or open a PR, that counts as the yes. If it says to commit to `main` and push, do that instead of a branch and PR. Merging into `main` updates the live site.
 - Finish with a table: item, status (done, partly done, skipped, blocked), what changed, and how it was verified. Then list any bugs you noticed but did not fix, and any questions left open.
