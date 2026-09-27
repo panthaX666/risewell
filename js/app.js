@@ -57,6 +57,26 @@ function nextWakeLabel(from) {
   return 'No wake days set';
 }
 
+// "Saturday" within the last week, otherwise "September 14".
+function dayName(k, today) {
+  if (k === today) return 'today';
+  return addDays(k, 7) > today ? DN[weekday(k)] : parseKey(k).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+}
+function dayList(keys, today) {
+  const names = keys.map((k) => dayName(k, today));
+  if (names.length > 3) return `${names.length} days, ${names[0]} to ${names[names.length - 1]}`;
+  return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+function noticeFor(events, today) {
+  const frozen = events.filter((e) => e.type === 'freeze').map((e) => e.day);
+  const missed = events.filter((e) => e.type === 'miss'), ended = missed.find((e) => e.streak > 0);
+  const parts = [];
+  if (frozen.length) parts.push(`${frozen.length === 1 ? 'A freeze' : 'Freezes'} covered ${dayList(frozen, today)}.`);
+  if (missed.length) parts.push(`You missed ${dayList(missed.map((e) => e.day), today)}.`);
+  if (ended) parts.push(`Your ${ended.streak}-day streak ended ${dayName(ended.day, today)}.`);
+  return { text: parts.join(' '), miss: missed.length > 0 };
+}
+
 let toastTimer;
 function toast(msg) {
   const t = $('#toast');
@@ -168,6 +188,12 @@ function renderHome(n, today, s, streak) {
       break;
   }
   $('#cta').innerHTML = html;
+  $('#notice').hidden = !st.notice;
+  if (st.notice) {
+    $('#notice .itile').className = `itile ${st.notice.miss ? 'bad' : 'cold'}`;
+    $('#notice use').setAttribute('href', `#i-${st.notice.miss ? 'info' : 'snow'}`);
+    txt('notice', st.notice.text);
+  }
 
   // This week, Monday to Sunday
   const monday = addDays(today, -weekday(today));
@@ -442,6 +468,7 @@ document.addEventListener('click', (e) => {
     case 'shareBtn': return openShare();
     case 'doShare': return doShare();
     case 'doSave': return doSave();
+    case 'noticeClose': st.notice = null; save(); return render();
     case 'soundSw': st.sound = !st.sound; save(); return render();
     case 'resetBtn': $('#resetSheet').hidden = false; history.pushState({ d: stack.length, sheet: 1 }, ''); return;
     case 'confirmReset': st = defaultState(); save(); applyTheme(); $('#resetSheet').hidden = true; skipPop = true; history.back(); return reset('welcome');
@@ -462,11 +489,11 @@ document.addEventListener('change', (e) => {
 
 // Re-check the clock every 30 seconds and whenever the app comes back to the front.
 function tick() {
-  const events = reconcile(st, now());
+  const n = now(), events = reconcile(st, n);
   if (events.length) {
+    const add = noticeFor(events, dayKey(n)), old = st.notice;
+    st.notice = old ? { text: `${old.text} ${add.text}`, miss: old.miss || add.miss } : add;
     save();
-    const last = events[events.length - 1], name = DN[weekday(last.day)];
-    toast(last.type === 'freeze' ? `A streak freeze covered ${name}.` : `You missed ${name}. Your streak restarted.`);
   }
   if (['home', 'streak'].includes(current())) render();
 }

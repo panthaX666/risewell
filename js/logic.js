@@ -36,7 +36,8 @@ export function defaultState() {
     start: null, // first day the streak can count
     lastRec: null, // last day whose outcome is settled
     setupDay: null, // the day setup finished, if the streak starts that day; never costs a freeze or a miss
-    lock: null, // { day, goal, win, days }: today's schedule before a mid-window edit
+    lock: null,
+    notice: null, // { text, miss }: missed days to explain on Home until dismissed // { day, goal, win, days }: today's schedule before a mid-window edit
     history: {}, // dayKey -> { status: 'awake'|'done'|'freeze'|'miss', t, goal, task }
     freezes: 1,
     longest: 0,
@@ -106,7 +107,8 @@ export function finishOnboarding(st, now) {
 }
 
 // Settle every day whose window has closed: a scheduled day without a finished
-// task uses a freeze if one is left, otherwise it is a miss. Returns events.
+// task uses a freeze if one is left, otherwise it is a miss. Returns events; a
+// miss carries `streak`, the length of the streak it ended (0 if none).
 export function reconcile(st, now) {
   const events = [];
   if (!st.onboarded || !st.start) return events;
@@ -127,8 +129,9 @@ export function reconcile(st, now) {
           if (!st.badges.saver) st.badges.saver = today;
           events.push({ type: 'freeze', day: k });
         } else {
+          const streak = streakOf(st, k);
           st.history[k] = { status: 'miss' };
-          events.push({ type: 'miss', day: k });
+          events.push({ type: 'miss', day: k, streak });
         }
       }
     }

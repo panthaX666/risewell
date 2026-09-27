@@ -206,3 +206,10 @@ test('finishing on setup day counts as normal', () => {
   assert.deepEqual(reconcile(st, at(1, 10)).filter((e) => e.day === dayKey(at(0, 0))), []);
   assert.equal(streakOf(st, dayKey(at(0, 0))), 1);
 });
+
+test('a miss reports the length of the streak it ended', () => {
+  const st = started({ freezes: 1 });
+  for (let d = 0; d < 5; d++) wake(st, d); // Mon to Fri
+  const ev = reconcile(st, at(7, 9)); // the following Monday
+  assert.deepEqual(ev.map((e) => [e.type, e.streak]), [['freeze', undefined], ['miss', 5], ['miss', 0]]);
+});
