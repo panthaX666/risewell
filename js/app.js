@@ -1,7 +1,7 @@
 import {
-  TASKS, BADGES, defaultState, dayKey, addDays, parseKey, weekday, minutesOf, isScheduled, windowOf,
-  formatTime, finishOnboarding, reconcile, streakOf, todayStatus, tapAwake, completeTask,
-  nextMilestone, levelOf, insightsOf,
+  TASKS, badgeInfo, badgeList, defaultState, dayKey, addDays, parseKey, weekday, minutesOf, isScheduled, windowOf,
+  formatTime, finishOnboarding, editSchedule, reconcile, taskFor, streakOf, todayStatus, tapAwake, completeTask,
+  nextStreakBadge, prevStreakBadge, insightsOf,
 } from './logic.js';
 
 // ---------- state ----------
@@ -10,18 +10,31 @@ let st = load();
 function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (saved && saved.v === 1) return Object.assign(defaultState(), saved);
+    if (saved && saved.v === 1) return fromSaved(saved);
   } catch (e) { /* fall through to a fresh state */ }
   return defaultState();
 }
+// Keep only the fields the app knows, so retired ones (like the old score) drop out.
+function fromSaved(saved) {
+  const st = defaultState();
+  for (const k of Object.keys(st)) if (k in saved) st[k] = saved[k];
+  return st;
+}
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { toast('Could not save. Check that storage is not full.'); }
+}
+
+// Ask the browser not to clear Risewell's data when the phone runs low on space.
+function keepData() {
+  navigator.storage?.persisted?.().then((kept) => kept || navigator.storage.persist()).catch(() => {});
 }
 
 // `?now=2026-09-28T06:40` pins the clock, for testing a morning at any hour.
 const pinned = new URLSearchParams(location.search).get('now');
 const offset = pinned && !isNaN(Date.parse(pinned)) ? Date.parse(pinned) - Date.now() : 0;
 const now = () => new Date(Date.now() + offset);
+// `?alarmtest=1` shows a trial link that asks Android's Clock app to set the alarm.
+const alarmTest = new URLSearchParams(location.search).get('alarmtest') === '1';
 
 // ---------- helpers ----------
 const $ = (s, r = document) => r.querySelector(s);
@@ -32,7 +45,9 @@ const width = (key, pct) => $$(`[data-bind="${key}"]`).forEach((e) => { e.style.
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const DL = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const DN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const task = () => TASKS.find((t) => t.id === st.task) || TASKS[0];
+const findTask = (id) => TASKS.find((t) => t.id === id) || TASKS[0];
+const task = () => findTask(taskFor(st, dayKey(now()))); // today's task, after any swap
+const defaultTask = () => findTask(st.task);
 const splitTime = (min) => { const [hm, ap] = formatTime(min).split(' '); return { hm, ap }; };
 
 function daysLabel() {
@@ -49,6 +64,26 @@ function nextWakeLabel(from) {
     if (isScheduled(st, k)) return `${i === 1 ? 'Tomorrow' : DN[weekday(k)]} at ${formatTime(st.goal)}`;
   }
   return 'No wake days set';
+}
+
+// "Saturday" within the last week, otherwise "September 14".
+function dayName(k, today) {
+  if (k === today) return 'today';
+  return addDays(k, 7) > today ? DN[weekday(k)] : parseKey(k).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+}
+function dayList(keys, today) {
+  const names = keys.map((k) => dayName(k, today));
+  if (names.length > 3) return `${names.length} days, ${names[0]} to ${names[names.length - 1]}`;
+  return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+function noticeFor(events, today) {
+  const frozen = events.filter((e) => e.type === 'freeze').map((e) => e.day);
+  const missed = events.filter((e) => e.type === 'miss'), ended = missed.find((e) => e.streak > 0);
+  const parts = [];
+  if (frozen.length) parts.push(`${frozen.length === 1 ? 'A freeze' : 'Freezes'} covered ${dayList(frozen, today)}.`);
+  if (missed.length) parts.push(`You missed ${dayList(missed.map((e) => e.day), today)}.`);
+  if (ended) parts.push(`Your ${ended.streak}-day streak ended ${dayName(ended.day, today)}.`);
+  return { text: parts.join(' '), miss: missed.length > 0 };
 }
 
 let toastTimer;
@@ -86,7 +121,7 @@ function back() { if (stack.length > 1) history.back(); }
 addEventListener('popstate', () => {
   if (skipPop) { skipPop = false; return; }
   const open = $$('.sheet').find((s) => !s.hidden);
-  if (open) { open.hidden = true; return; }
+  if (open) { hideSheet(open); return; }
   if (stack.length > 1) { stack.pop(); show(stack[stack.length - 1]); }
 });
 const current = () => stack[stack.length - 1];
@@ -100,23 +135,22 @@ function paintThemeColor() {
 // ---------- rendering ----------
 let calMonth = null; // {y, m} shown on the Streak screen
 let lastResult = null; // outcome of the latest completed task, for the celebration
+let swapDefault = false; // "Make this my default" in the swap sheet
 
 function render() {
-  const n = now(), today = dayKey(n), status = todayStatus(st, n), t = task();
-  const streak = streakOf(st, today), lv = levelOf(st.points), goal = splitTime(st.goal), w = windowOf(st);
+  const n = now(), today = dayKey(n), status = todayStatus(st, n), t = defaultTask(), tt = task();
+  const streak = streakOf(st, today), goal = splitTime(st.goal), w = windowOf(st);
 
   txt('goal', formatTime(st.goal)); txt('goalH', goal.hm); txt('goalAP', goal.ap);
   txt('close', formatTime(w.close)); txt('dayslabel', daysLabel());
   txt('bedhint', `For 8 hours of sleep, be in bed by ${formatTime(st.goal - 480)}.`);
-  txt('taskname', t.name); txt('taskdesc', t.desc); txt('tasktime', t.time);
+  txt('taskname', t.name);
   $$('[data-task-icon]').forEach((u) => u.setAttribute('href', `#i-${t.icon}`));
+  txt('todayname', tt.name); txt('taskdesc', tt.desc); txt('tasktime', tt.time);
+  $$('[data-today-icon]').forEach((u) => u.setAttribute('href', `#i-${tt.icon}`));
   txt('streak', streak);
   txt('dayword', streak === 1 ? 'day' : 'days');
   txt('longest', st.longest); txt('longword', st.longest === 1 ? 'day' : 'days');
-  txt('level', `Level ${lv.level}`); txt('points', plural(st.points, 'point'));
-  txt('levelnext', `${plural(lv.toNext, 'point')} to Level ${lv.level + 1}`);
-  txt('levelhint', `Level ${lv.level} · ${plural(lv.toNext, 'point')} to Level ${lv.level + 1}`);
-  width('levelbar', (lv.into / 500) * 100);
 
   renderHome(n, today, status, streak);
   renderTaskLists();
@@ -124,15 +158,15 @@ function render() {
   renderStreak(n, today, streak);
   renderStats(today);
   renderMe();
-  if (status.kind === 'awake') txt('tappedAt', `You tapped at ${formatTime(status.rec.t)}. One step left.`);
+  if (status.kind === 'awake') txt('tappedAt', `You tapped at ${formatTime(status.rec.t)}. Finish by ${formatTime(status.due)}.`);
 }
 
 function renderHome(n, today, s, streak) {
   const hour = n.getHours();
   txt('greeting', hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening');
   txt('date', n.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }));
-  const target = nextMilestone(streak), left = target - streak;
-  txt('milestone', `${plural(left, 'day')} to your ${target}-day ${target <= 30 ? 'badge' : 'milestone'}`);
+  const target = nextStreakBadge(streak), left = target - streak;
+  txt('milestone', `${plural(left, 'day')} to your ${target}-day badge`);
   $('#ring').style.strokeDashoffset = (552.9 * (1 - Math.min(1, streak / target))).toFixed(1);
 
   const card = (tile, cls, title, sub) => `<div class="card"><div class="row"><div class="itile ${cls}">${ic(tile)}</div><div class="grow"><p class="t-h3">${title}</p><p class="t-cap">${sub}</p></div></div></div>`;
@@ -147,10 +181,10 @@ function renderHome(n, today, s, streak) {
       html = line(`Opens at ${formatTime(s.open)}, 2 hours before your goal`) + button('I’m Awake', 'disabled');
       break;
     case 'awake':
-      html = line(`Tapped at ${formatTime(s.rec.t)}. Finish your task to count it.`) + `<button class="btn big" data-go="doing">${ic('check')}Finish your tiny task</button>`;
+      html = line(`Tapped at ${formatTime(s.rec.t)}. Finish by ${formatTime(s.due)} to count it.`) + `<button class="btn big" data-go="doing">${ic('check')}Finish your tiny task</button>`;
       break;
     case 'done':
-      html = card('check', 'good', 'Streak secured', `Up at ${formatTime(s.rec.t)}. See you ${nextWakeLabel(today).replace(/ at .*/, '').toLowerCase()}.`);
+      html = card('check', 'good', 'Streak secured', `Up at ${formatTime(s.rec.t)}. See you ${nextWakeLabel(today).replace(/ at .*/, '').replace('Tomorrow', 'tomorrow')}.`);
       break;
     case 'freeze':
       html = card('snow', 'cold', 'A freeze saved your streak', `You missed today’s window. Next wake: ${nextWakeLabel(today)}.`);
@@ -165,7 +199,18 @@ function renderHome(n, today, s, streak) {
       html = card('sunrise', '', 'Your streak starts tomorrow', `Tap “I’m Awake” by ${formatTime(windowOf(st).close)}.`);
       break;
   }
+  // In the evening, once today is decided, remind about tomorrow's alarm.
+  if (hour >= 18 && ['done', 'off', 'freeze', 'miss'].includes(s.kind)) {
+    const next = nextWakeLabel(today), bed = next.startsWith('Tomorrow') ? `In bed by ${formatTime(st.goal - 480)}. ` : '';
+    html += card('bell', '', `Next wake: ${next}`, `${bed}Check your alarm in the Clock app.`);
+  }
   $('#cta').innerHTML = html;
+  $('#notice').hidden = !st.notice;
+  if (st.notice) {
+    $('#notice .itile').className = `itile ${st.notice.miss ? 'bad' : 'cold'}`;
+    $('#notice use').setAttribute('href', `#i-${st.notice.miss ? 'info' : 'snow'}`);
+    txt('notice', st.notice.text);
+  }
 
   // This week, Monday to Sunday
   const monday = addDays(today, -weekday(today));
@@ -186,13 +231,16 @@ function renderHome(n, today, s, streak) {
   txt('weektag', `${done} of ${planned} days`);
 }
 
+function taskOptions(selected, attr) {
+  return TASKS.map((x) => {
+    const on = x.id === selected;
+    return `<button class="opt" role="radio" aria-checked="${on}" ${attr}="${x.id}"><div class="itile">${ic(x.icon)}</div><div class="grow"><p class="t-h3">${x.name}</p><p class="t-cap">${x.time}</p></div><span class="radio">${on ? ic('check', 'sm') : ''}</span></button>`;
+  }).join('');
+}
 function renderTaskLists() {
-  $$('[data-tasklist]').forEach((box) => {
-    box.innerHTML = TASKS.map((x) => {
-      const on = x.id === st.task;
-      return `<button class="opt" role="radio" aria-checked="${on}" data-task="${x.id}"><div class="itile">${ic(x.icon)}</div><div class="grow"><p class="t-h3">${x.name}</p><p class="t-cap">${x.time}</p></div><span class="radio">${on ? ic('check', 'sm') : ''}</span></button>`;
-    }).join('');
-  });
+  $$('[data-tasklist]').forEach((box) => { box.innerHTML = taskOptions(st.task, 'data-task'); });
+  $('#swapList').innerHTML = taskOptions(taskFor(st, dayKey(now())), 'data-swap');
+  $('#swapDefault').setAttribute('aria-checked', String(swapDefault));
 }
 
 function renderSchedule() {
@@ -210,13 +258,24 @@ function renderSchedule() {
   const g = splitTime(st.goal);
   txt('goalH', g.hm); txt('goalAP', g.ap);
   txt('bedhint', `Tap the time to set exact minutes. For 8 hours of sleep, be in bed by ${formatTime(st.goal - 480)}.`);
-  $('#days').innerHTML = DL.map((d, i) => `<button class="dchip" data-day="${i}" aria-pressed="${!!st.days[i]}" aria-label="${DN[i]}">${d}</button>`).join('');
+  const chips = DL.map((d, i) => `<button class="dchip" data-day="${i}" aria-pressed="${!!st.days[i]}" aria-label="${DN[i]}">${d}</button>`).join('');
+  $$('[data-days]').forEach((box) => { box.innerHTML = chips; });
+  const lock = st.lock?.day === dayKey(now()) ? st.lock : null;
+  $('#lockNote').hidden = !lock;
+  if (lock) {
+    const s = todayStatus(st, now());
+    txt('locknote', s.kind === 'open' ? `Changes apply from tomorrow. Today still counts if you tap by ${formatTime(s.close)}.` : 'Changes apply from tomorrow.');
+  }
+  $('#alarmTest').hidden = !alarmTest;
+  if (alarmTest) {
+    $('#alarmTest').href = `intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR=${Math.floor(st.goal / 60)};i.android.intent.extra.alarm.MINUTES=${st.goal % 60};S.android.intent.extra.alarm.MESSAGE=Risewell;end`;
+  }
   $$('#winseg button').forEach((b) => b.setAttribute('aria-checked', String(+b.dataset.win === st.win)));
 }
 
 function renderStreak(n, today, streak) {
-  const target = nextMilestone(streak), prev = [0, 7, 14, 30, 60, 100, 200, 365].filter((x) => x < target).pop() || 0;
-  txt('nextbadge', `Next: ${target}-day ${target <= 30 ? 'badge' : 'milestone'}`);
+  const target = nextStreakBadge(streak), prev = prevStreakBadge(streak);
+  txt('nextbadge', `Next: ${target}-day badge`);
   txt('nextbadgesub', `${plural(target - streak, 'day')} to go`);
   width('nextbar', ((streak - prev) / (target - prev)) * 100);
   txt('freezes', plural(st.freezes, 'streak freeze'));
@@ -265,10 +324,10 @@ function renderStats(today) {
 }
 
 function renderMe() {
-  const earned = BADGES.filter((b) => st.badges[b.id]).length;
-  txt('badgecount', `${earned} of ${BADGES.length}`);
-  $('#badges').innerHTML = BADGES.map((b) => {
-    const on = !!st.badges[b.id];
+  const list = badgeList(st);
+  txt('badgecount', `${list.filter((b) => b.earned).length} earned`);
+  $('#badges').innerHTML = list.map((b) => {
+    const on = !!b.earned;
     return `<div class="badge${on ? '' : ' locked'}"><div class="itile">${ic(on ? b.icon : 'lock')}</div><span>${b.name}</span></div>`;
   }).join('');
   $$('#themeseg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.themeSet === st.theme)));
@@ -282,19 +341,16 @@ function renderCelebration() {
   txt('celmsg', r.t <= r.goal
     ? `Up at ${formatTime(r.t)}, ${r.goal - r.t ? `${plural(r.goal - r.t, 'minute')} before your goal` : 'right on your goal'}.`
     : `Up at ${formatTime(r.t)}, ${plural(Math.max(0, close - r.t), 'minute')} before your window closed.`);
-  let icon = 'medal', title, sub;
-  if (r.earned.length) {
-    const b = BADGES.find((x) => x.id === r.earned[0]);
-    icon = b.icon; title = `New badge: ${b.name}`; sub = 'See all your badges on the Me tab.';
-  } else if (r.freezeEarned) {
-    icon = 'snow'; title = 'You earned a streak freeze'; sub = 'It covers one missed day automatically.';
-  } else {
-    const target = nextMilestone(r.streak);
-    title = `${plural(target - r.streak, 'day')} to your ${target}-day ${target <= 30 ? 'badge' : 'milestone'}`;
-    sub = 'Wake up tomorrow to keep going.';
+  const rewards = r.earned.map((id) => {
+    const b = badgeInfo(id);
+    return { icon: b.icon, title: `New badge: ${b.name}`, sub: 'See all your badges on the Me tab.' };
+  });
+  if (r.freezeEarned) rewards.push({ icon: 'snow', title: 'You earned a streak freeze', sub: 'It covers one missed day automatically.' });
+  if (!rewards.length) {
+    const target = nextStreakBadge(r.streak);
+    rewards.push({ icon: 'medal', title: `${plural(target - r.streak, 'day')} to your ${target}-day badge`, sub: 'Wake up tomorrow to keep going.' });
   }
-  $('[data-cel-icon]').setAttribute('href', `#i-${icon}`);
-  txt('celtitle', title); txt('celsub', sub);
+  $('#celextra').innerHTML = rewards.map((x) => `<div class="row"><div class="itile">${ic(x.icon)}</div><div class="grow"><p class="t-h3">${x.title}</p><p class="t-cap">${x.sub}</p></div></div>`).join('');
 }
 
 function confetti() {
@@ -359,8 +415,7 @@ function drawCard() {
   return c;
 }
 function openShare() {
-  $('#shareSheet').hidden = false;
-  history.pushState({ d: stack.length, sheet: 1 }, '');
+  openSheet('shareSheet');
   const make = () => drawCard().toBlob((b) => {
     shareBlob = b;
     const img = $('#shareImg');
@@ -385,6 +440,52 @@ function doSave() {
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   toast('Image saved to your Downloads.');
 }
+// ---------- backup ----------
+async function exportBackup() {
+  const file = new File([JSON.stringify(st)], `risewell-backup-${dayKey(now())}.json`, { type: 'application/json' });
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file); a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast('Backup saved to your Downloads.');
+}
+let pendingImport = null;
+async function importBackup(file) {
+  let data = null;
+  try { data = JSON.parse(await file.text()); } catch (e) { /* not JSON */ }
+  const valid = data && data.v === 1 && data.onboarded && data.history && typeof data.history === 'object' && Array.isArray(data.days) && data.days.length === 7;
+  if (!valid) return toast('That file isn’t a Risewell backup.');
+  pendingImport = fromSaved(data);
+  openSheet('importSheet');
+}
+
+// Sheets take focus while open and hand it back when they close.
+let sheetReturn = null;
+function openSheet(id) {
+  const sheet = $(`#${id}`);
+  sheetReturn = document.activeElement;
+  sheet.hidden = false;
+  history.pushState({ d: stack.length, sheet: 1 }, '');
+  $('.panel button', sheet)?.focus();
+}
+function hideSheet(sheet) {
+  sheet.hidden = true;
+  if (sheetReturn?.isConnected) sheetReturn.focus();
+  sheetReturn = null;
+}
+const focusables = (box) => $$('button, a[href], input:not([hidden])', box).filter((x) => !x.disabled && x.offsetParent !== null);
+document.addEventListener('keydown', (e) => {
+  const open = e.key === 'Tab' && $$('.sheet').find((s) => !s.hidden);
+  if (!open) return;
+  const f = focusables($('.panel', open)), first = f[0], last = f[f.length - 1];
+  if (!first) return;
+  if (!open.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+  else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 function closeSheets() {
   const open = $$('.sheet').some((s) => !s.hidden);
   if (open) history.back();
@@ -407,7 +508,7 @@ document.addEventListener('click', (e) => {
   }
   if (el.disabled) return;
   const d = el.dataset;
-  if (d.time) { st.goal = (st.goal + Number(d.time) + 1440) % 1440; save(); return render(); }
+  if (d.time) { editSchedule(st, now(), { goal: (st.goal + Number(d.time) + 1440) % 1440 }); save(); return render(); }
   if ('pickTime' in d) {
     const input = el.closest('[data-timepicker]').querySelector('input');
     const pad = (v) => String(v).padStart(2, '0');
@@ -416,27 +517,44 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (d.task) { st.task = d.task; save(); return render(); }
-  if (d.day !== undefined) { st.days[+d.day] = st.days[+d.day] ? 0 : 1; save(); return render(); }
-  if (d.win) { st.win = +d.win; save(); return render(); }
+  if (d.swap) {
+    st.todayTask = { day: dayKey(now()), id: d.swap };
+    if (swapDefault) st.task = d.swap;
+    save(); closeSheets(); return render();
+  }
+  if (d.day !== undefined) {
+    const days = [...st.days]; days[+d.day] = days[+d.day] ? 0 : 1;
+    if (!days.some(Boolean)) return toast('Keep at least one wake day.');
+    editSchedule(st, now(), { days }); save(); return render();
+  }
+  if (d.win) { editSchedule(st, now(), { win: +d.win }); save(); return render(); }
   if (d.themeSet) { st.theme = d.themeSet; save(); applyTheme(); return render(); }
   if ('close' in d) return closeSheets();
   switch (el.id) {
-    case 'finishSetup': finishOnboarding(st, now()); save(); return reset('home');
+    case 'finishSetup': finishOnboarding(st, now()); save(); keepData(); return reset('home');
     case 'awakeBtn': if (tapAwake(st, now())) { save(); go('doing'); } else render(); return;
     case 'doneTask': {
       const r = completeTask(st, now());
-      if (!r) { reset('home'); return toast('Your wake window has closed.'); }
+      if (!r) { reset('home'); return toast('Your 60 minutes ran out.'); }
       save(); lastResult = r;
       replace('celebrate'); renderCelebration(); confetti(); chime();
       return;
     }
-    case 'swapTask': { const i = TASKS.findIndex((x) => x.id === st.task); st.task = TASKS[(i + 1) % TASKS.length].id; save(); return render(); }
+    case 'swapTask': swapDefault = false; render(); return openSheet('swapSheet');
+    case 'swapDefault': swapDefault = !swapDefault; return el.setAttribute('aria-checked', String(swapDefault));
     case 'shareBtn': return openShare();
     case 'doShare': return doShare();
     case 'doSave': return doSave();
+    case 'noticeClose': st.notice = null; save(); return render();
     case 'soundSw': st.sound = !st.sound; save(); return render();
-    case 'resetBtn': $('#resetSheet').hidden = false; history.pushState({ d: stack.length, sheet: 1 }, ''); return;
+    case 'resetBtn': return openSheet('resetSheet');
     case 'confirmReset': st = defaultState(); save(); applyTheme(); $('#resetSheet').hidden = true; skipPop = true; history.back(); return reset('welcome');
+    case 'exportBtn': return exportBackup();
+    case 'importBtn': return $('#importFile').click();
+    case 'confirmImport':
+      st = pendingImport; pendingImport = null; save(); applyTheme();
+      $('#importSheet').hidden = true; skipPop = true; history.back();
+      reset('home'); tick(); return toast('Backup imported.');
     case 'calPrev': calMonth.m--; if (calMonth.m < 0) { calMonth.m = 11; calMonth.y--; } return render();
     case 'calNext': calMonth.m++; if (calMonth.m > 11) { calMonth.m = 0; calMonth.y++; } return render();
   }
@@ -446,19 +564,25 @@ document.addEventListener('click', (e) => {
   if ('back' in d) return back();
 });
 
+$('#importFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (file) importBackup(file);
+});
+
 document.addEventListener('change', (e) => {
   if (!e.target.matches('.timeinput') || !e.target.value) return;
   const [h, m] = e.target.value.split(':').map(Number);
-  st.goal = h * 60 + m; save(); render();
+  editSchedule(st, now(), { goal: h * 60 + m }); save(); render();
 });
 
 // Re-check the clock every 30 seconds and whenever the app comes back to the front.
 function tick() {
-  const events = reconcile(st, now());
+  const n = now(), events = reconcile(st, n);
   if (events.length) {
+    const add = noticeFor(events, dayKey(n)), old = st.notice;
+    st.notice = old ? { text: `${old.text} ${add.text}`, miss: old.miss || add.miss } : add;
     save();
-    const last = events[events.length - 1], name = DN[weekday(last.day)];
-    toast(last.type === 'freeze' ? `A streak freeze covered ${name}.` : `You missed ${name}. Your streak restarted.`);
   }
   if (['home', 'streak'].includes(current())) render();
 }
@@ -471,6 +595,7 @@ history.replaceState({ d: 1 }, '');
 stack = [st.onboarded ? 'home' : 'welcome'];
 show(stack[0]);
 tick();
+if (st.onboarded) keepData();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -38,28 +38,29 @@ A wake-up streak game. Each morning you tap **I’m Awake**, do a tiny task that
 | `css/app.css` | Design tokens and components, light and dark themes |
 | `js/logic.js` | Streak rules as pure functions (no DOM), covered by tests |
 | `js/app.js` | Navigation (mirrors the Android back button via the History API), rendering, storage, share image, theme, sound |
-| `sw.js` | Offline cache, cache-first. Bump `VERSION` when any cached file changes |
+| `sw.js` | Offline cache, cache-first. Bump `VERSION` when any cached file changes, then run `npm run stamp` |
 | `manifest.webmanifest` | Install metadata and icons |
-| `tests/logic.test.mjs` | 11 `node --test` tests, all passing |
+| `tests/logic.test.mjs` | Streak rule tests (`node --test`) |
+| `tests/sw.test.mjs` | Fails when a cached file changed without a new `VERSION` and stamp |
+| `tools/stamp.mjs` | Writes the `files-hash` line in `sw.js`; refuses until `VERSION` is bumped |
 | `tools/make-icons.mjs` | Draws the app icon (sun over hills) into `icons/*.png` with no dependencies |
 | `tools/build.mjs` | Copies the app files into `dist/` for any static host |
 | `prototype/risewell.html` | The original clickable design prototype |
 
-Commands: `npm test`, `npm start` (serves at http://localhost:8765), `npm run build`, `npm run icons`. Add `?now=2026-09-28T06:40` to the URL to pin the clock and test a morning at any hour.
+Commands: `npm test`, `npm run stamp`, `npm start` (serves at http://localhost:8765), `npm run build`, `npm run icons`. Add `?now=2026-09-28T06:40` to the URL to pin the clock and test a morning at any hour.
 
 ## Screens (11)
 
-Welcome → Wake goal (setup 1 of 2) → First task (setup 2 of 2) → **Home** · Tiny task · Celebration · **Streak** (calendar, next badge, freezes, link to Insights) · Wake goal settings · Task library · Insights · **Me** (level, badges, wake goal, task, theme, sound, delete all data). The tab bar has three tabs: Today, Streak and Me.
+Welcome → Wake goal (setup 1 of 2) → First task (setup 2 of 2) → **Home** · Tiny task · Celebration · **Streak** (calendar, next badge, freezes, link to Insights) · Wake goal settings · Task library · Insights · **Me** (badges, wake goal, task, theme, sound, delete all data). The tab bar has three tabs: Today, Streak and Me.
 
 ## Streak rules (in `js/logic.js`)
 
 - Wake goal (default 7:00 AM), repeat days (Monday first), and a wake window of 15, 30 or 60 minutes (default 30).
-- **I’m Awake** opens 2 hours before the goal and closes at goal + window. A day only counts once the tiny task is done, which can happen any time before midnight.
-- The streak starts on setup day if that day's window has not closed yet, otherwise the next day.
+- **I’m Awake** opens 2 hours before the goal and closes at goal + window. A day only counts once the tiny task is done, which must happen within 60 minutes of the tap.
+- The streak starts on setup day if that day's window has not closed yet, otherwise the next day. Setup day never uses a freeze or counts as a miss: finishing it adds to the streak, missing it costs nothing.
 - A scheduled day without a finished task uses a **streak freeze** if one is left, otherwise it is recorded as a miss and the streak resets. Days off never break the streak or add to it.
 - You start with 1 freeze and earn 1 at every 14-day multiple, up to a maximum of 2.
-- 20 points per wake-up, 500 points per level.
-- Badges: 7 days, Up before 6 AM, Freeze saver, 14 days, 30 days. Milestones after that: 60, 100, 200 and 365 days.
+- Streak badges at 7, 10, 14, 30, 50, 75 and 100 days, then every 100 days. Also Up before 6 AM and Freeze saver. Me shows the streak badges earned so far, the next one, and the other two.
 - Insights appear after 3 wake-ups: average wake time, hit rate over 30 days, a 7-day chart of minutes after the goal, and a tip when weekends run 10 or more minutes later than weekdays.
 - Missed days are settled (`reconcile`) on launch, every 30 seconds, and whenever the app returns to the front. The app shows a toast when a freeze was used or the streak reset.
 
@@ -70,6 +71,17 @@ Welcome → Wake goal (setup 1 of 2) → First task (setup 2 of 2) → **Home** 
 - Spacing: 16px between sections, 12px inside cards, 20px side gutters. Card radius 20px. Tap targets at least 44px.
 - Buttons: primary (Ember, raised), secondary (flat), text. One line-icon set, drawn as an SVG sprite in `index.html`. No emoji.
 - Dark text on orange fills, for contrast. Honors `prefers-reduced-motion`.
+
+## Clock app shortcut test (R11, needs the owner's phone)
+
+A test-only link on the Wake goal screen asks Android's Clock app to set an alarm at the wake goal. It appears only when the URL contains `?alarmtest=1`; normal users never see it. If the test works, turning it into a normal button is a separate item.
+
+1. On the PC, run `npm start`. Find the PC's local IP address.
+2. With the phone on the same Wi-Fi, open `http://<PC-IP>:8765/?alarmtest=1` in Chrome. Use the GitHub Pages URL with `?alarmtest=1` instead if Pages is live.
+3. Go to Me → Wake goal and tap the test link.
+4. Record the result: Clock opens with the time filled in / Clock opens without the time / nothing happens / error.
+
+Result: ______________________________
 
 ## Open ideas raised but not built
 

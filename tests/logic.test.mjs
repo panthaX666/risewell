@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   defaultState, finishOnboarding, reconcile, streakOf, todayStatus, tapAwake,
-  completeTask, dayKey, addDays, insightsOf,
+  completeTask, dayKey, addDays, insightsOf, editSchedule, windowOf, nextStreakBadge, prevStreakBadge, badgeList,
 } from '../js/logic.js';
 
 // Monday 2026-09-28 is the first day of every scenario.
@@ -10,7 +10,7 @@ const at = (day, h, m = 0) => { const d = new Date(2026, 8, 28 + day); d.setHour
 
 function started(opts = {}) {
   const st = Object.assign(defaultState(), { goal: 390, win: 30 }, opts); // 6:30 to 7:00
-  finishOnboarding(st, at(0, 5, 0));
+  finishOnboarding(st, at(-1, 12)); // setup the day before, so day 0 is an ordinary day
   return st;
 }
 function wake(st, day, h = 6, m = 40) {
@@ -41,7 +41,6 @@ test('tap alone does not count until the task is done', () => {
   assert.equal(streakOf(st, dayKey(at(0, 0))), 0);
   const r = completeTask(st, at(0, 6, 41));
   assert.equal(r.streak, 1);
-  assert.equal(st.points, 20);
 });
 
 test('consecutive days build the streak and longest', () => {
@@ -80,13 +79,13 @@ test('days off do not break or add to the streak', () => {
   assert.equal(wake(st, 7).streak, 6);
 });
 
-test('tapped but unfinished task becomes a miss the next day', () => {
+test('tapped but unfinished task becomes a miss after its 60 minutes', () => {
   const st = started({ freezes: 0 });
   wake(st, 0);
   tapAwake(st, at(1, 6, 40));
-  reconcile(st, at(1, 23, 0)); // same day, still pending
+  reconcile(st, at(1, 7, 40)); // task still due until 7:40
   assert.equal(st.history[dayKey(at(1, 0))].status, 'awake');
-  reconcile(st, at(2, 5, 0));
+  reconcile(st, at(1, 7, 41));
   assert.equal(st.history[dayKey(at(1, 0))].status, 'miss');
 });
 
@@ -117,4 +116,132 @@ test('insights report average wake, hit rate and weekend gap', () => {
   assert.equal(i.weekendGap, 24);
   assert.equal(i.last7.length, 7);
   assert.equal(addDays('2026-12-31', 1), '2027-01-01');
+});
+
+test('a goal edit after the window opens applies from tomorrow', () => {
+  const st = Object.assign(defaultState(), { goal: 540 }); // 9:00 AM
+  finishOnboarding(st, at(-1, 12));
+  assert.deepEqual(reconcile(st, at(0, 8)), []);
+  editSchedule(st, at(0, 8), { goal: 420 }); // 7:00 AM, window already closed
+  assert.deepEqual(reconcile(st, at(0, 8)), []);
+  assert.equal(todayStatus(st, at(0, 8)).kind, 'open');
+  assert.equal(st.lock.goal, 540);
+  editSchedule(st, at(0, 8, 5), { days: [0, 1, 1, 1, 1, 1, 1] }); // Monday off
+  assert.equal(st.lock.goal, 540, 'first snapshot is kept');
+  assert.equal(todayStatus(st, at(0, 8, 5)).kind, 'open');
+  tapAwake(st, at(0, 8, 10)); completeTask(st, at(0, 8, 11));
+  reconcile(st, at(1, 6));
+  assert.equal(st.lock, null);
+  assert.equal(windowOf(st, dayKey(at(1, 0))).close, 450);
+});
+
+test('a goal edit before the window opens applies today', () => {
+  const st = Object.assign(defaultState(), { goal: 540 });
+  finishOnboarding(st, at(-1, 12));
+  editSchedule(st, at(0, 6), { goal: 480 });
+  assert.equal(st.lock, null);
+  assert.equal(todayStatus(st, at(0, 8, 31)).kind, 'closed');
+});
+
+test('a tap under a locked schedule records the locked goal', () => {
+  const st = Object.assign(defaultState(), { goal: 540 });
+  finishOnboarding(st, at(-1, 12));
+  editSchedule(st, at(0, 8), { goal: 420 });
+  tapAwake(st, at(0, 8, 10));
+  assert.equal(st.history[dayKey(at(0, 0))].goal, 540);
+});
+
+test('the tiny task counts within 60 minutes of the tap', () => {
+  const st = started({ goal: 420 }); // window closes 7:30
+  tapAwake(st, at(0, 7, 0));
+  assert.equal(todayStatus(st, at(0, 7, 30)).due, 480);
+  assert.equal(completeTask(st, at(0, 7, 59)).streak, 1);
+});
+
+test('the tiny task no longer counts after 60 minutes', () => {
+  const st = started({ goal: 420 });
+  tapAwake(st, at(0, 7, 0));
+  assert.equal(completeTask(st, at(0, 8, 1)), null);
+  assert.equal(todayStatus(st, at(0, 8, 1)).kind, 'closed');
+});
+
+test('an unfinished task is settled once its 60 minutes pass', () => {
+  const st = started({ goal: 420 });
+  tapAwake(st, at(0, 7, 0));
+  assert.deepEqual(reconcile(st, at(0, 8, 0)), []);
+  const ev = reconcile(st, at(0, 8, 1));
+  assert.deepEqual(ev, [{ type: 'freeze', day: dayKey(at(0, 0)) }]);
+  const early = started({ goal: 540 }); // tapped at 7:30, window open until 9:30
+  tapAwake(early, at(0, 7, 30));
+  assert.equal(reconcile(early, at(0, 8, 31)).length, 1);
+});
+
+test('an untapped setup day costs no freeze and no miss', () => {
+  const st = Object.assign(defaultState(), { goal: 540 }); // 9:00, window closes 9:30
+  finishOnboarding(st, at(0, 6));
+  assert.equal(st.setupDay, dayKey(at(0, 0)));
+  assert.equal(todayStatus(st, at(0, 9, 31)).kind, 'notyet');
+  tapAwake(st, at(1, 9)); completeTask(st, at(1, 9, 1));
+  const ev = reconcile(st, at(1, 10));
+  assert.deepEqual(ev.filter((e) => e.day === dayKey(at(0, 0))), []);
+  assert.equal(st.history[dayKey(at(0, 0))], undefined);
+  assert.equal(st.freezes, 1);
+  assert.equal(streakOf(st, dayKey(at(1, 0))), 1);
+});
+
+test('a lapsed task on setup day costs nothing either', () => {
+  const st = Object.assign(defaultState(), { goal: 540 });
+  finishOnboarding(st, at(0, 6));
+  tapAwake(st, at(0, 8));
+  assert.deepEqual(reconcile(st, at(0, 9, 1)), []);
+  assert.equal(todayStatus(st, at(0, 9, 1)).kind, 'notyet');
+  assert.equal(st.freezes, 1);
+});
+
+test('finishing on setup day counts as normal', () => {
+  const st = Object.assign(defaultState(), { goal: 540 });
+  finishOnboarding(st, at(0, 6));
+  tapAwake(st, at(0, 8, 50));
+  assert.equal(completeTask(st, at(0, 8, 51)).streak, 1);
+  assert.deepEqual(reconcile(st, at(1, 10)).filter((e) => e.day === dayKey(at(0, 0))), []);
+  assert.equal(streakOf(st, dayKey(at(0, 0))), 1);
+});
+
+test('a miss reports the length of the streak it ended', () => {
+  const st = started({ freezes: 1 });
+  for (let d = 0; d < 5; d++) wake(st, d); // Mon to Fri
+  const ev = reconcile(st, at(7, 9)); // the following Monday
+  assert.deepEqual(ev.map((e) => [e.type, e.streak]), [['freeze', undefined], ['miss', 5], ['miss', 0]]);
+});
+
+test('a swapped task counts for that day only', () => {
+  const st = started();
+  st.todayTask = { day: dayKey(at(0, 0)), id: 'pushups' };
+  wake(st, 0);
+  assert.equal(st.history[dayKey(at(0, 0))].task, 'pushups');
+  assert.equal(st.task, 'water');
+  wake(st, 1);
+  assert.equal(st.history[dayKey(at(1, 0))].task, 'water');
+});
+
+test('streak badges follow 7, 10, 14, 30, 50, 75, 100, then every 100', () => {
+  assert.deepEqual([0, 7, 9, 10, 14, 29, 30, 50, 75, 99, 100, 150, 200].map(nextStreakBadge),
+    [7, 10, 10, 14, 30, 30, 50, 75, 100, 100, 200, 200, 300]);
+  assert.deepEqual([0, 6, 7, 13, 99, 100, 250].map(prevStreakBadge), [0, 0, 7, 10, 75, 100, 200]);
+  const st = started();
+  let r;
+  for (let d = 0; d < 10; d++) r = wake(st, d);
+  assert.deepEqual(r.earned, ['d10']);
+  assert.ok(st.badges.d7 && !st.badges.d14);
+  assert.deepEqual(badgeList(st).map((b) => [b.id, !!b.earned]),
+    [['d7', true], ['d10', true], ['d14', false], ['early', false], ['saver', false]]);
+});
+
+test('a long streak earns every badge it passed', () => {
+  const st = started();
+  for (let d = 0; d < 199; d++) wake(st, d);
+  const r = wake(st, 199);
+  assert.deepEqual(r.earned, ['d200']);
+  assert.deepEqual(Object.keys(st.badges).filter((id) => id.startsWith('d')).sort(),
+    ['d10', 'd100', 'd14', 'd200', 'd30', 'd50', 'd7', 'd75']);
 });

@@ -4,7 +4,8 @@
     "description":  "Offline wake-up streak game",
     "main":  "index.js",
     "scripts":  {
-                    "test":  "node --test tests/logic.test.mjs",
+                    "test":  "node --test tests/logic.test.mjs tests/sw.test.mjs",
+                    "stamp":  "node tools/stamp.mjs",
                     "icons":  "node tools/make-icons.mjs",
                     "start":  "npx --yes http-server -c-1 -p 8765 .",
                     "build":  "node tools/build.mjs"

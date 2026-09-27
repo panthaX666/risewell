@@ -3,11 +3,10 @@
 // times of day are minutes after midnight.
 
 export const EARLY_MINUTES = 120; // "I'm Awake" opens this long before the goal
-export const POINTS_PER_WAKE = 20;
-export const POINTS_PER_LEVEL = 500;
+export const TASK_MINUTES = 60; // the tiny task must be done this long after the tap
 export const MAX_FREEZES = 2;
 export const FREEZE_EVERY = 14; // earn a freeze at every 14-day multiple
-export const MILESTONES = [7, 14, 30, 60, 100, 200, 365];
+export const STREAK_BADGES = [7, 10, 14, 30, 50, 75, 100]; // then one every 100 days
 
 export const TASKS = [
   { id: 'water', icon: 'drop', name: 'Drink a glass of water', desc: 'Fill a glass, drink it, and come back.', time: 'About 30 seconds' },
@@ -18,13 +17,17 @@ export const TASKS = [
   { id: 'outside', icon: 'door', name: 'Step outside', desc: 'Open the door and take five slow breaths.', time: 'About 30 seconds' },
 ];
 
-export const BADGES = [
-  { id: 'd7', name: '7 days', icon: 'sprout' },
+// Streak badges have ids "d<days>"; the others are fixed.
+export const OTHER_BADGES = [
   { id: 'early', name: 'Up before 6 AM', icon: 'sunrise' },
   { id: 'saver', name: 'Freeze saver', icon: 'snow' },
-  { id: 'd14', name: '14 days', icon: 'medal' },
-  { id: 'd30', name: '30 days', icon: 'crown' },
 ];
+const STREAK_ICONS = { 7: 'sprout', 10: 'star', 14: 'medal', 30: 'crown', 50: 'flame', 75: 'sun' };
+export function badgeInfo(id) {
+  const n = Number(id.match(/^d(\d+)$/)?.[1]);
+  if (n) return { id, days: n, name: `${n} days`, icon: STREAK_ICONS[n] || 'crown' };
+  return OTHER_BADGES.find((b) => b.id === id);
+}
 
 export function defaultState() {
   return {
@@ -36,9 +39,12 @@ export function defaultState() {
     task: 'water',
     start: null, // first day the streak can count
     lastRec: null, // last day whose outcome is settled
+    setupDay: null, // the day setup finished, if the streak starts that day; never costs a freeze or a miss
+    lock: null,
+    todayTask: null, // { day, id }: a one-day swap of the tiny task
+    notice: null, // { text, miss }: missed days to explain on Home until dismissed // { day, goal, win, days }: today's schedule before a mid-window edit
     history: {}, // dayKey -> { status: 'awake'|'done'|'freeze'|'miss', t, goal, task }
     freezes: 1,
-    points: 0,
     longest: 0,
     badges: {}, // badgeId -> dayKey earned
     theme: 'system',
@@ -60,11 +66,31 @@ export function addDays(k, n) {
 }
 export const weekday = (k) => (parseKey(k).getDay() + 6) % 7; // Monday = 0
 export const minutesOf = (d) => d.getHours() * 60 + d.getMinutes();
-export const isScheduled = (st, k) => !!st.days[weekday(k)];
+// A schedule edit made after today's window opened applies from tomorrow:
+// `st.lock` keeps today's schedule as it was before the edit.
+const scheduleFor = (st, k) => (k && st.lock && st.lock.day === k ? st.lock : st);
+export const isScheduled = (st, k) => !!scheduleFor(st, k).days[weekday(k)];
 
-export function windowOf(st) {
-  return { open: Math.max(0, st.goal - EARLY_MINUTES), close: Math.min(1439, st.goal + st.win) };
+export function windowOf(st, k) {
+  const s = scheduleFor(st, k);
+  return { open: Math.max(0, s.goal - EARLY_MINUTES), close: Math.min(1439, s.goal + s.win) };
 }
+
+// Change the goal, window or repeat days. If today's window has already opened
+// and today is not finished or settled, today keeps its old schedule.
+export function editSchedule(st, now, change) {
+  const today = dayKey(now);
+  const counts = st.onboarded && st.start && st.start <= today && !(st.lastRec >= today);
+  const open = minutesOf(now) >= windowOf(st, today).open;
+  if (counts && open && st.history[today]?.status !== 'done' && st.lock?.day !== today) {
+    st.lock = { day: today, goal: st.goal, win: st.win, days: [...st.days] };
+  }
+  Object.assign(st, change);
+  return st;
+}
+
+// Last minute of the day the tiny task still counts for a tap at `rec.t`.
+export const taskDeadline = (rec) => Math.min(rec.t + TASK_MINUTES, 1439);
 
 export function formatTime(min) {
   min = ((min % 1440) + 1440) % 1440;
@@ -75,29 +101,32 @@ export function formatTime(min) {
 // ---------- lifecycle ----------
 
 // The streak starts today if today's window has not closed yet, otherwise tomorrow.
+// Setup day can only add to the streak: missing it costs nothing.
 export function finishOnboarding(st, now) {
   const today = dayKey(now);
   st.onboarded = true;
   st.start = minutesOf(now) <= windowOf(st).close ? today : addDays(today, 1);
+  st.setupDay = st.start === today ? today : null;
   st.lastRec = addDays(st.start, -1);
   return st;
 }
 
 // Settle every day whose window has closed: a scheduled day without a finished
-// task uses a freeze if one is left, otherwise it is a miss. Returns events.
+// task uses a freeze if one is left, otherwise it is a miss. Returns events; a
+// miss carries `streak`, the length of the streak it ended (0 if none).
 export function reconcile(st, now) {
   const events = [];
   if (!st.onboarded || !st.start) return events;
-  const today = dayKey(now);
-  const closed = minutesOf(now) > windowOf(st).close;
+  const today = dayKey(now), m = minutesOf(now);
   let k = st.lastRec && st.lastRec >= st.start ? addDays(st.lastRec, 1) : st.start;
   while (k <= today) {
-    const past = k < today;
-    if (!past && !closed) break;
     const rec = st.history[k];
-    if (isScheduled(st, k)) {
-      // Today's tap still counts if the task gets done before midnight.
-      if (!past && rec && rec.status === 'awake') break;
+    if (k === today) {
+      // Today stays open until the window closes, or after a tap, until the task deadline.
+      const pending = rec?.status === 'awake' ? m <= taskDeadline(rec) : m <= windowOf(st, k).close;
+      if (pending) break;
+    }
+    if (isScheduled(st, k) && k !== st.setupDay) {
       if (!rec || rec.status === 'awake') {
         if (st.freezes > 0) {
           st.freezes--;
@@ -105,14 +134,16 @@ export function reconcile(st, now) {
           if (!st.badges.saver) st.badges.saver = today;
           events.push({ type: 'freeze', day: k });
         } else {
+          const streak = streakOf(st, k);
           st.history[k] = { status: 'miss' };
-          events.push({ type: 'miss', day: k });
+          events.push({ type: 'miss', day: k, streak });
         }
       }
     }
     st.lastRec = k;
     k = addDays(k, 1);
   }
+  if (st.lock && st.lock.day <= st.lastRec) st.lock = null;
   return events;
 }
 
@@ -131,29 +162,35 @@ export function streakOf(st, today) {
 }
 
 export function todayStatus(st, now) {
-  const k = dayKey(now), m = minutesOf(now), w = windowOf(st), r = st.history[k];
+  const k = dayKey(now), m = minutesOf(now), w = windowOf(st, k), r = st.history[k];
   const base = { day: k, now: m, ...w };
+  const lapsed = k === st.setupDay ? 'notyet' : 'closed';
   if (r && r.status !== 'awake') return { ...base, kind: r.status, rec: r };
-  if (r) return { ...base, kind: 'awake', rec: r };
+  if (r) {
+    const due = taskDeadline(r);
+    return { ...base, kind: m <= due ? 'awake' : lapsed, rec: r, due };
+  }
   if (st.start && k < st.start) return { ...base, kind: 'notyet' };
   if (!isScheduled(st, k)) return { ...base, kind: 'off' };
   if (m < w.open) return { ...base, kind: 'early' };
   if (m <= w.close) return { ...base, kind: 'open', left: w.close - m };
-  return { ...base, kind: 'closed' };
+  return { ...base, kind: lapsed };
 }
+
+// The tiny task for day `k`: a swap made that day, otherwise the default.
+export const taskFor = (st, k) => (st.todayTask && st.todayTask.day === k ? st.todayTask.id : st.task);
 
 export function tapAwake(st, now) {
   const s = todayStatus(st, now);
   if (s.kind !== 'open') return false;
-  st.history[s.day] = { status: 'awake', t: s.now, goal: st.goal };
+  st.history[s.day] = { status: 'awake', t: s.now, goal: scheduleFor(st, s.day).goal };
   return true;
 }
 
 export function completeTask(st, now) {
   const k = dayKey(now), r = st.history[k];
-  if (!r || r.status !== 'awake') return null;
-  st.history[k] = { status: 'done', t: r.t, goal: r.goal, task: st.task };
-  st.points += POINTS_PER_WAKE;
+  if (!r || r.status !== 'awake' || minutesOf(now) > taskDeadline(r)) return null;
+  st.history[k] = { status: 'done', t: r.t, goal: r.goal, task: taskFor(st, k) };
   const streak = streakOf(st, k);
   st.longest = Math.max(st.longest, streak);
   let freezeEarned = false;
@@ -163,19 +200,28 @@ export function completeTask(st, now) {
   }
   const earned = [];
   const award = (id) => { if (!st.badges[id]) { st.badges[id] = k; earned.push(id); } };
-  if (streak >= 7) award('d7');
-  if (streak >= 14) award('d14');
-  if (streak >= 30) award('d30');
+  for (let d = STREAK_BADGES[0]; d <= streak; d = nextStreakBadge(d)) award(`d${d}`);
   if (r.t < 360) award('early');
-  return { streak, t: r.t, goal: r.goal, gained: POINTS_PER_WAKE, freezeEarned, earned };
+  return { streak, t: r.t, goal: r.goal, freezeEarned, earned };
 }
 
-export function nextMilestone(streak) {
-  return MILESTONES.find((x) => x > streak) ?? streak + 100;
+// The first streak badge above `streak`, and the last one at or below it (0 if none).
+export function nextStreakBadge(streak) {
+  return STREAK_BADGES.find((x) => x > streak) ?? (Math.floor(streak / 100) + 1) * 100;
+}
+export function prevStreakBadge(streak) {
+  if (streak >= 100) return Math.floor(streak / 100) * 100;
+  return STREAK_BADGES.filter((x) => x <= streak).pop() || 0;
 }
 
-export function levelOf(points) {
-  return { level: Math.floor(points / POINTS_PER_LEVEL) + 1, into: points % POINTS_PER_LEVEL, toNext: POINTS_PER_LEVEL - (points % POINTS_PER_LEVEL) };
+// Badges for the Me screen: streak badges earned so far and the next one to
+// earn, then the other badges. `earned` is the day it was won, or undefined.
+export function badgeList(st) {
+  const streakDays = Object.keys(st.badges).map((id) => badgeInfo(id)?.days).filter(Boolean).sort((a, b) => a - b);
+  const next = nextStreakBadge(streakDays[streakDays.length - 1] || 0);
+  return [...streakDays, next].map((d) => badgeInfo(`d${d}`))
+    .concat(OTHER_BADGES)
+    .map((b) => ({ ...b, earned: st.badges[b.id] }));
 }
 
 // Numbers for the Insights screen, over the last 30 days.
