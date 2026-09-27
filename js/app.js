@@ -124,7 +124,7 @@ function render() {
   renderStreak(n, today, streak);
   renderStats(today);
   renderMe();
-  if (status.kind === 'awake') txt('tappedAt', `You tapped at ${formatTime(status.rec.t)}. One step left.`);
+  if (status.kind === 'awake') txt('tappedAt', `You tapped at ${formatTime(status.rec.t)}. Finish by ${formatTime(status.due)}.`);
 }
 
 function renderHome(n, today, s, streak) {
@@ -147,7 +147,7 @@ function renderHome(n, today, s, streak) {
       html = line(`Opens at ${formatTime(s.open)}, 2 hours before your goal`) + button('I’m Awake', 'disabled');
       break;
     case 'awake':
-      html = line(`Tapped at ${formatTime(s.rec.t)}. Finish your task to count it.`) + `<button class="btn big" data-go="doing">${ic('check')}Finish your tiny task</button>`;
+      html = line(`Tapped at ${formatTime(s.rec.t)}. Finish by ${formatTime(s.due)} to count it.`) + `<button class="btn big" data-go="doing">${ic('check')}Finish your tiny task</button>`;
       break;
     case 'done':
       html = card('check', 'good', 'Streak secured', `Up at ${formatTime(s.rec.t)}. See you ${nextWakeLabel(today).replace(/ at .*/, '').toLowerCase()}.`);
@@ -434,7 +434,7 @@ document.addEventListener('click', (e) => {
     case 'awakeBtn': if (tapAwake(st, now())) { save(); go('doing'); } else render(); return;
     case 'doneTask': {
       const r = completeTask(st, now());
-      if (!r) { reset('home'); return toast('Your wake window has closed.'); }
+      if (!r) { reset('home'); return toast('Your 60 minutes ran out.'); }
       save(); lastResult = r;
       replace('celebrate'); renderCelebration(); confetti(); chime();
       return;

@@ -80,13 +80,13 @@ test('days off do not break or add to the streak', () => {
   assert.equal(wake(st, 7).streak, 6);
 });
 
-test('tapped but unfinished task becomes a miss the next day', () => {
+test('tapped but unfinished task becomes a miss after its 60 minutes', () => {
   const st = started({ freezes: 0 });
   wake(st, 0);
   tapAwake(st, at(1, 6, 40));
-  reconcile(st, at(1, 23, 0)); // same day, still pending
+  reconcile(st, at(1, 7, 40)); // task still due until 7:40
   assert.equal(st.history[dayKey(at(1, 0))].status, 'awake');
-  reconcile(st, at(2, 5, 0));
+  reconcile(st, at(1, 7, 41));
   assert.equal(st.history[dayKey(at(1, 0))].status, 'miss');
 });
 
@@ -150,4 +150,29 @@ test('a tap under a locked schedule records the locked goal', () => {
   editSchedule(st, at(0, 8), { goal: 420 });
   tapAwake(st, at(0, 8, 10));
   assert.equal(st.history[dayKey(at(0, 0))].goal, 540);
+});
+
+test('the tiny task counts within 60 minutes of the tap', () => {
+  const st = started({ goal: 420 }); // window closes 7:30
+  tapAwake(st, at(0, 7, 0));
+  assert.equal(todayStatus(st, at(0, 7, 30)).due, 480);
+  assert.equal(completeTask(st, at(0, 7, 59)).streak, 1);
+});
+
+test('the tiny task no longer counts after 60 minutes', () => {
+  const st = started({ goal: 420 });
+  tapAwake(st, at(0, 7, 0));
+  assert.equal(completeTask(st, at(0, 8, 1)), null);
+  assert.equal(todayStatus(st, at(0, 8, 1)).kind, 'closed');
+});
+
+test('an unfinished task is settled once its 60 minutes pass', () => {
+  const st = started({ goal: 420 });
+  tapAwake(st, at(0, 7, 0));
+  assert.deepEqual(reconcile(st, at(0, 8, 0)), []);
+  const ev = reconcile(st, at(0, 8, 1));
+  assert.deepEqual(ev, [{ type: 'freeze', day: dayKey(at(0, 0)) }]);
+  const early = started({ goal: 540 }); // tapped at 7:30, window open until 9:30
+  tapAwake(early, at(0, 7, 30));
+  assert.equal(reconcile(early, at(0, 8, 31)).length, 1);
 });

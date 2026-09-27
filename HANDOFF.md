@@ -54,7 +54,7 @@ Welcome → Wake goal (setup 1 of 2) → First task (setup 2 of 2) → **Home** 
 ## Streak rules (in `js/logic.js`)
 
 - Wake goal (default 7:00 AM), repeat days (Monday first), and a wake window of 15, 30 or 60 minutes (default 30).
-- **I’m Awake** opens 2 hours before the goal and closes at goal + window. A day only counts once the tiny task is done, which can happen any time before midnight.
+- **I’m Awake** opens 2 hours before the goal and closes at goal + window. A day only counts once the tiny task is done, which must happen within 60 minutes of the tap.
 - The streak starts on setup day if that day's window has not closed yet, otherwise the next day.
 - A scheduled day without a finished task uses a **streak freeze** if one is left, otherwise it is recorded as a miss and the streak resets. Days off never break the streak or add to it.
 - You start with 1 freeze and earn 1 at every 14-day multiple, up to a maximum of 2.

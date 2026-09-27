@@ -3,6 +3,7 @@
 // times of day are minutes after midnight.
 
 export const EARLY_MINUTES = 120; // "I'm Awake" opens this long before the goal
+export const TASK_MINUTES = 60; // the tiny task must be done this long after the tap
 export const POINTS_PER_WAKE = 20;
 export const POINTS_PER_LEVEL = 500;
 export const MAX_FREEZES = 2;
@@ -84,6 +85,9 @@ export function editSchedule(st, now, change) {
   return st;
 }
 
+// Last minute of the day the tiny task still counts for a tap at `rec.t`.
+export const taskDeadline = (rec) => Math.min(rec.t + TASK_MINUTES, 1439);
+
 export function formatTime(min) {
   min = ((min % 1440) + 1440) % 1440;
   const h = Math.floor(min / 60), m = min % 60;
@@ -106,16 +110,16 @@ export function finishOnboarding(st, now) {
 export function reconcile(st, now) {
   const events = [];
   if (!st.onboarded || !st.start) return events;
-  const today = dayKey(now);
-  const closed = minutesOf(now) > windowOf(st, today).close;
+  const today = dayKey(now), m = minutesOf(now);
   let k = st.lastRec && st.lastRec >= st.start ? addDays(st.lastRec, 1) : st.start;
   while (k <= today) {
-    const past = k < today;
-    if (!past && !closed) break;
     const rec = st.history[k];
+    if (k === today) {
+      // Today stays open until the window closes, or after a tap, until the task deadline.
+      const pending = rec?.status === 'awake' ? m <= taskDeadline(rec) : m <= windowOf(st, k).close;
+      if (pending) break;
+    }
     if (isScheduled(st, k)) {
-      // Today's tap still counts if the task gets done before midnight.
-      if (!past && rec && rec.status === 'awake') break;
       if (!rec || rec.status === 'awake') {
         if (st.freezes > 0) {
           st.freezes--;
@@ -153,7 +157,10 @@ export function todayStatus(st, now) {
   const k = dayKey(now), m = minutesOf(now), w = windowOf(st, k), r = st.history[k];
   const base = { day: k, now: m, ...w };
   if (r && r.status !== 'awake') return { ...base, kind: r.status, rec: r };
-  if (r) return { ...base, kind: 'awake', rec: r };
+  if (r) {
+    const due = taskDeadline(r);
+    return { ...base, kind: m <= due ? 'awake' : 'closed', rec: r, due };
+  }
   if (st.start && k < st.start) return { ...base, kind: 'notyet' };
   if (!isScheduled(st, k)) return { ...base, kind: 'off' };
   if (m < w.open) return { ...base, kind: 'early' };
@@ -170,7 +177,7 @@ export function tapAwake(st, now) {
 
 export function completeTask(st, now) {
   const k = dayKey(now), r = st.history[k];
-  if (!r || r.status !== 'awake') return null;
+  if (!r || r.status !== 'awake' || minutesOf(now) > taskDeadline(r)) return null;
   st.history[k] = { status: 'done', t: r.t, goal: r.goal, task: st.task };
   st.points += POINTS_PER_WAKE;
   const streak = streakOf(st, k);
