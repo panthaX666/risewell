@@ -1,6 +1,6 @@
 import {
   TASKS, BADGES, defaultState, dayKey, addDays, parseKey, weekday, minutesOf, isScheduled, windowOf,
-  formatTime, finishOnboarding, reconcile, streakOf, todayStatus, tapAwake, completeTask,
+  formatTime, finishOnboarding, editSchedule, reconcile, streakOf, todayStatus, tapAwake, completeTask,
   nextMilestone, levelOf, insightsOf,
 } from './logic.js';
 
@@ -211,6 +211,12 @@ function renderSchedule() {
   txt('goalH', g.hm); txt('goalAP', g.ap);
   txt('bedhint', `Tap the time to set exact minutes. For 8 hours of sleep, be in bed by ${formatTime(st.goal - 480)}.`);
   $('#days').innerHTML = DL.map((d, i) => `<button class="dchip" data-day="${i}" aria-pressed="${!!st.days[i]}" aria-label="${DN[i]}">${d}</button>`).join('');
+  const lock = st.lock?.day === dayKey(now()) ? st.lock : null;
+  $('#lockNote').hidden = !lock;
+  if (lock) {
+    const s = todayStatus(st, now());
+    txt('locknote', s.kind === 'open' ? `Changes apply from tomorrow. Today still counts if you tap by ${formatTime(s.close)}.` : 'Changes apply from tomorrow.');
+  }
   $$('#winseg button').forEach((b) => b.setAttribute('aria-checked', String(+b.dataset.win === st.win)));
 }
 
@@ -407,7 +413,7 @@ document.addEventListener('click', (e) => {
   }
   if (el.disabled) return;
   const d = el.dataset;
-  if (d.time) { st.goal = (st.goal + Number(d.time) + 1440) % 1440; save(); return render(); }
+  if (d.time) { editSchedule(st, now(), { goal: (st.goal + Number(d.time) + 1440) % 1440 }); save(); return render(); }
   if ('pickTime' in d) {
     const input = el.closest('[data-timepicker]').querySelector('input');
     const pad = (v) => String(v).padStart(2, '0');
@@ -416,8 +422,11 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (d.task) { st.task = d.task; save(); return render(); }
-  if (d.day !== undefined) { st.days[+d.day] = st.days[+d.day] ? 0 : 1; save(); return render(); }
-  if (d.win) { st.win = +d.win; save(); return render(); }
+  if (d.day !== undefined) {
+    const days = [...st.days]; days[+d.day] = days[+d.day] ? 0 : 1;
+    editSchedule(st, now(), { days }); save(); return render();
+  }
+  if (d.win) { editSchedule(st, now(), { win: +d.win }); save(); return render(); }
   if (d.themeSet) { st.theme = d.themeSet; save(); applyTheme(); return render(); }
   if ('close' in d) return closeSheets();
   switch (el.id) {
@@ -449,7 +458,7 @@ document.addEventListener('click', (e) => {
 document.addEventListener('change', (e) => {
   if (!e.target.matches('.timeinput') || !e.target.value) return;
   const [h, m] = e.target.value.split(':').map(Number);
-  st.goal = h * 60 + m; save(); render();
+  editSchedule(st, now(), { goal: h * 60 + m }); save(); render();
 });
 
 // Re-check the clock every 30 seconds and whenever the app comes back to the front.

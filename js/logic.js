@@ -36,6 +36,7 @@ export function defaultState() {
     task: 'water',
     start: null, // first day the streak can count
     lastRec: null, // last day whose outcome is settled
+    lock: null, // { day, goal, win, days }: today's schedule before a mid-window edit
     history: {}, // dayKey -> { status: 'awake'|'done'|'freeze'|'miss', t, goal, task }
     freezes: 1,
     points: 0,
@@ -60,10 +61,27 @@ export function addDays(k, n) {
 }
 export const weekday = (k) => (parseKey(k).getDay() + 6) % 7; // Monday = 0
 export const minutesOf = (d) => d.getHours() * 60 + d.getMinutes();
-export const isScheduled = (st, k) => !!st.days[weekday(k)];
+// A schedule edit made after today's window opened applies from tomorrow:
+// `st.lock` keeps today's schedule as it was before the edit.
+const scheduleFor = (st, k) => (k && st.lock && st.lock.day === k ? st.lock : st);
+export const isScheduled = (st, k) => !!scheduleFor(st, k).days[weekday(k)];
 
-export function windowOf(st) {
-  return { open: Math.max(0, st.goal - EARLY_MINUTES), close: Math.min(1439, st.goal + st.win) };
+export function windowOf(st, k) {
+  const s = scheduleFor(st, k);
+  return { open: Math.max(0, s.goal - EARLY_MINUTES), close: Math.min(1439, s.goal + s.win) };
+}
+
+// Change the goal, window or repeat days. If today's window has already opened
+// and today is not finished or settled, today keeps its old schedule.
+export function editSchedule(st, now, change) {
+  const today = dayKey(now);
+  const counts = st.onboarded && st.start && st.start <= today && !(st.lastRec >= today);
+  const open = minutesOf(now) >= windowOf(st, today).open;
+  if (counts && open && st.history[today]?.status !== 'done' && st.lock?.day !== today) {
+    st.lock = { day: today, goal: st.goal, win: st.win, days: [...st.days] };
+  }
+  Object.assign(st, change);
+  return st;
 }
 
 export function formatTime(min) {
@@ -89,7 +107,7 @@ export function reconcile(st, now) {
   const events = [];
   if (!st.onboarded || !st.start) return events;
   const today = dayKey(now);
-  const closed = minutesOf(now) > windowOf(st).close;
+  const closed = minutesOf(now) > windowOf(st, today).close;
   let k = st.lastRec && st.lastRec >= st.start ? addDays(st.lastRec, 1) : st.start;
   while (k <= today) {
     const past = k < today;
@@ -113,6 +131,7 @@ export function reconcile(st, now) {
     st.lastRec = k;
     k = addDays(k, 1);
   }
+  if (st.lock && st.lock.day <= st.lastRec) st.lock = null;
   return events;
 }
 
@@ -131,7 +150,7 @@ export function streakOf(st, today) {
 }
 
 export function todayStatus(st, now) {
-  const k = dayKey(now), m = minutesOf(now), w = windowOf(st), r = st.history[k];
+  const k = dayKey(now), m = minutesOf(now), w = windowOf(st, k), r = st.history[k];
   const base = { day: k, now: m, ...w };
   if (r && r.status !== 'awake') return { ...base, kind: r.status, rec: r };
   if (r) return { ...base, kind: 'awake', rec: r };

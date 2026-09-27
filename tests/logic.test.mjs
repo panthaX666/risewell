@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   defaultState, finishOnboarding, reconcile, streakOf, todayStatus, tapAwake,
-  completeTask, dayKey, addDays, insightsOf,
+  completeTask, dayKey, addDays, insightsOf, editSchedule, windowOf,
 } from '../js/logic.js';
 
 // Monday 2026-09-28 is the first day of every scenario.
@@ -117,4 +117,29 @@ test('insights report average wake, hit rate and weekend gap', () => {
   assert.equal(i.weekendGap, 24);
   assert.equal(i.last7.length, 7);
   assert.equal(addDays('2026-12-31', 1), '2027-01-01');
+});
+
+test('a goal edit after the window opens applies from tomorrow', () => {
+  const st = Object.assign(defaultState(), { goal: 540 }); // 9:00 AM
+  finishOnboarding(st, at(-1, 12));
+  assert.deepEqual(reconcile(st, at(0, 8)), []);
+  editSchedule(st, at(0, 8), { goal: 420 }); // 7:00 AM, window already closed
+  assert.deepEqual(reconcile(st, at(0, 8)), []);
+  assert.equal(todayStatus(st, at(0, 8)).kind, 'open');
+  assert.equal(st.lock.goal, 540);
+  editSchedule(st, at(0, 8, 5), { days: [0, 1, 1, 1, 1, 1, 1] }); // Monday off
+  assert.equal(st.lock.goal, 540, 'first snapshot is kept');
+  assert.equal(todayStatus(st, at(0, 8, 5)).kind, 'open');
+  tapAwake(st, at(0, 8, 10)); completeTask(st, at(0, 8, 11));
+  reconcile(st, at(1, 6));
+  assert.equal(st.lock, null);
+  assert.equal(windowOf(st, dayKey(at(1, 0))).close, 450);
+});
+
+test('a goal edit before the window opens applies today', () => {
+  const st = Object.assign(defaultState(), { goal: 540 });
+  finishOnboarding(st, at(-1, 12));
+  editSchedule(st, at(0, 6), { goal: 480 });
+  assert.equal(st.lock, null);
+  assert.equal(todayStatus(st, at(0, 8, 31)).kind, 'closed');
 });
