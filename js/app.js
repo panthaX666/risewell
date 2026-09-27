@@ -243,7 +243,8 @@ function renderSchedule() {
   const g = splitTime(st.goal);
   txt('goalH', g.hm); txt('goalAP', g.ap);
   txt('bedhint', `Tap the time to set exact minutes. For 8 hours of sleep, be in bed by ${formatTime(st.goal - 480)}.`);
-  $('#days').innerHTML = DL.map((d, i) => `<button class="dchip" data-day="${i}" aria-pressed="${!!st.days[i]}" aria-label="${DN[i]}">${d}</button>`).join('');
+  const chips = DL.map((d, i) => `<button class="dchip" data-day="${i}" aria-pressed="${!!st.days[i]}" aria-label="${DN[i]}">${d}</button>`).join('');
+  $$('[data-days]').forEach((box) => { box.innerHTML = chips; });
   const lock = st.lock?.day === dayKey(now()) ? st.lock : null;
   $('#lockNote').hidden = !lock;
   if (lock) {

@@ -86,6 +86,10 @@
     <p class="muted">Pick a time you can hit on a normal weekday. You can change it later.</p>
   </div>
   <div class="card" data-timepicker></div>
+  <div class="card">
+    <div class="card-h"><p class="t-label">Repeat</p><span class="t-cap" data-bind="dayslabel">Every day</span></div>
+    <div class="days" data-days></div>
+  </div>
   <div class="hint"><svg class="i"><use href="#i-bell"/></svg><p>Risewell can’t ring alarms. Set an alarm for <b data-bind="goal">7:00 AM</b> in your phone’s Clock app too.</p></div>
   <div class="foot"><button class="btn" data-go="pick">Continue</button></div>
 </section>
@@ -211,7 +215,7 @@
   <div class="card" data-timepicker></div>
   <div class="card">
     <div class="card-h"><p class="t-label">Repeat</p><span class="t-cap" data-bind="dayslabel">Every day</span></div>
-    <div class="days" id="days"></div>
+    <div class="days" data-days></div>
   </div>
   <div class="card">
     <p class="t-label">Wake window</p>
