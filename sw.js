@@ -1,6 +1,6 @@
 // Offline support: every file the app needs is cached on install and served
 // from the cache first. Bump VERSION whenever a cached file changes.
-const VERSION = 'risewell-v4';
+const VERSION = 'risewell-v5';
 const FILES = [
   './',
   'index.html',

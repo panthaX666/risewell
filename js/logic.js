@@ -37,6 +37,7 @@ export function defaultState() {
     task: 'water',
     start: null, // first day the streak can count
     lastRec: null, // last day whose outcome is settled
+    setupDay: null, // the day setup finished, if the streak starts that day; never costs a freeze or a miss
     lock: null, // { day, goal, win, days }: today's schedule before a mid-window edit
     history: {}, // dayKey -> { status: 'awake'|'done'|'freeze'|'miss', t, goal, task }
     freezes: 1,
@@ -97,10 +98,12 @@ export function formatTime(min) {
 // ---------- lifecycle ----------
 
 // The streak starts today if today's window has not closed yet, otherwise tomorrow.
+// Setup day can only add to the streak: missing it costs nothing.
 export function finishOnboarding(st, now) {
   const today = dayKey(now);
   st.onboarded = true;
   st.start = minutesOf(now) <= windowOf(st).close ? today : addDays(today, 1);
+  st.setupDay = st.start === today ? today : null;
   st.lastRec = addDays(st.start, -1);
   return st;
 }
@@ -119,7 +122,7 @@ export function reconcile(st, now) {
       const pending = rec?.status === 'awake' ? m <= taskDeadline(rec) : m <= windowOf(st, k).close;
       if (pending) break;
     }
-    if (isScheduled(st, k)) {
+    if (isScheduled(st, k) && k !== st.setupDay) {
       if (!rec || rec.status === 'awake') {
         if (st.freezes > 0) {
           st.freezes--;
@@ -156,16 +159,17 @@ export function streakOf(st, today) {
 export function todayStatus(st, now) {
   const k = dayKey(now), m = minutesOf(now), w = windowOf(st, k), r = st.history[k];
   const base = { day: k, now: m, ...w };
+  const lapsed = k === st.setupDay ? 'notyet' : 'closed';
   if (r && r.status !== 'awake') return { ...base, kind: r.status, rec: r };
   if (r) {
     const due = taskDeadline(r);
-    return { ...base, kind: m <= due ? 'awake' : 'closed', rec: r, due };
+    return { ...base, kind: m <= due ? 'awake' : lapsed, rec: r, due };
   }
   if (st.start && k < st.start) return { ...base, kind: 'notyet' };
   if (!isScheduled(st, k)) return { ...base, kind: 'off' };
   if (m < w.open) return { ...base, kind: 'early' };
   if (m <= w.close) return { ...base, kind: 'open', left: w.close - m };
-  return { ...base, kind: 'closed' };
+  return { ...base, kind: lapsed };
 }
 
 export function tapAwake(st, now) {

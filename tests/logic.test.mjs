@@ -10,7 +10,7 @@ const at = (day, h, m = 0) => { const d = new Date(2026, 8, 28 + day); d.setHour
 
 function started(opts = {}) {
   const st = Object.assign(defaultState(), { goal: 390, win: 30 }, opts); // 6:30 to 7:00
-  finishOnboarding(st, at(0, 5, 0));
+  finishOnboarding(st, at(-1, 12)); // setup the day before, so day 0 is an ordinary day
   return st;
 }
 function wake(st, day, h = 6, m = 40) {
@@ -175,4 +175,35 @@ test('an unfinished task is settled once its 60 minutes pass', () => {
   const early = started({ goal: 540 }); // tapped at 7:30, window open until 9:30
   tapAwake(early, at(0, 7, 30));
   assert.equal(reconcile(early, at(0, 8, 31)).length, 1);
+});
+
+test('an untapped setup day costs no freeze and no miss', () => {
+  const st = Object.assign(defaultState(), { goal: 540 }); // 9:00, window closes 9:30
+  finishOnboarding(st, at(0, 6));
+  assert.equal(st.setupDay, dayKey(at(0, 0)));
+  assert.equal(todayStatus(st, at(0, 9, 31)).kind, 'notyet');
+  tapAwake(st, at(1, 9)); completeTask(st, at(1, 9, 1));
+  const ev = reconcile(st, at(1, 10));
+  assert.deepEqual(ev.filter((e) => e.day === dayKey(at(0, 0))), []);
+  assert.equal(st.history[dayKey(at(0, 0))], undefined);
+  assert.equal(st.freezes, 1);
+  assert.equal(streakOf(st, dayKey(at(1, 0))), 1);
+});
+
+test('a lapsed task on setup day costs nothing either', () => {
+  const st = Object.assign(defaultState(), { goal: 540 });
+  finishOnboarding(st, at(0, 6));
+  tapAwake(st, at(0, 8));
+  assert.deepEqual(reconcile(st, at(0, 9, 1)), []);
+  assert.equal(todayStatus(st, at(0, 9, 1)).kind, 'notyet');
+  assert.equal(st.freezes, 1);
+});
+
+test('finishing on setup day counts as normal', () => {
+  const st = Object.assign(defaultState(), { goal: 540 });
+  finishOnboarding(st, at(0, 6));
+  tapAwake(st, at(0, 8, 50));
+  assert.equal(completeTask(st, at(0, 8, 51)).streak, 1);
+  assert.deepEqual(reconcile(st, at(1, 10)).filter((e) => e.day === dayKey(at(0, 0))), []);
+  assert.equal(streakOf(st, dayKey(at(0, 0))), 1);
 });
