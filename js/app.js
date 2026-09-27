@@ -421,6 +421,32 @@ function doSave() {
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   toast('Image saved to your Downloads.');
 }
+// ---------- backup ----------
+async function exportBackup() {
+  const file = new File([JSON.stringify(st)], `risewell-backup-${dayKey(now())}.json`, { type: 'application/json' });
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file); a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast('Backup saved to your Downloads.');
+}
+let pendingImport = null;
+async function importBackup(file) {
+  let data = null;
+  try { data = JSON.parse(await file.text()); } catch (e) { /* not JSON */ }
+  const valid = data && data.v === 1 && data.onboarded && data.history && typeof data.history === 'object' && Array.isArray(data.days) && data.days.length === 7;
+  if (!valid) return toast('That file isn’t a Risewell backup.');
+  pendingImport = fromSaved(data);
+  openSheet('importSheet');
+}
+
+function openSheet(id) {
+  $(`#${id}`).hidden = false;
+  history.pushState({ d: stack.length, sheet: 1 }, '');
+}
 function closeSheets() {
   const open = $$('.sheet').some((s) => !s.hidden);
   if (open) history.back();
@@ -477,6 +503,12 @@ document.addEventListener('click', (e) => {
     case 'soundSw': st.sound = !st.sound; save(); return render();
     case 'resetBtn': $('#resetSheet').hidden = false; history.pushState({ d: stack.length, sheet: 1 }, ''); return;
     case 'confirmReset': st = defaultState(); save(); applyTheme(); $('#resetSheet').hidden = true; skipPop = true; history.back(); return reset('welcome');
+    case 'exportBtn': return exportBackup();
+    case 'importBtn': return $('#importFile').click();
+    case 'confirmImport':
+      st = pendingImport; pendingImport = null; save(); applyTheme();
+      $('#importSheet').hidden = true; skipPop = true; history.back();
+      reset('home'); tick(); return toast('Backup imported.');
     case 'calPrev': calMonth.m--; if (calMonth.m < 0) { calMonth.m = 11; calMonth.y--; } return render();
     case 'calNext': calMonth.m++; if (calMonth.m > 11) { calMonth.m = 0; calMonth.y++; } return render();
   }
@@ -484,6 +516,12 @@ document.addEventListener('click', (e) => {
   if (d.tabGo) return reset(d.tabGo);
   if (d.reset) return reset(d.reset);
   if ('back' in d) return back();
+});
+
+$('#importFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (file) importBackup(file);
 });
 
 document.addEventListener('change', (e) => {

@@ -46,6 +46,7 @@
   <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6M3 20h18"/></symbol>
   <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></symbol>
   <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></symbol>
   <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
@@ -273,6 +274,11 @@
     </div>
   </div>
   <div class="card list">
+    <button class="li" id="exportBtn"><div class="itile"><svg class="i"><use href="#i-download"/></svg></div><div class="grow"><p class="t-h3">Export backup</p><p class="t-cap">Save your streak and history to a file</p></div></button>
+    <button class="li" id="importBtn"><div class="itile"><svg class="i"><use href="#i-upload"/></svg></div><div class="grow"><p class="t-h3">Import backup</p><p class="t-cap">Restore from a backup file</p></div></button>
+    <input type="file" id="importFile" accept="application/json" hidden>
+  </div>
+  <div class="card list">
     <div class="li"><div class="itile"><svg class="i"><use href="#i-sound"/></svg></div><div class="grow"><p class="t-h3">Celebration sound</p><p class="t-cap">Plays a short chime when you finish</p></div><button class="switch" id="soundSw" role="switch" aria-checked="true" aria-label="Celebration sound"></button></div>
     <button class="li danger" id="resetBtn"><div class="itile bad"><svg class="i"><use href="#i-trash"/></svg></div><div class="grow t-h3">Delete all data</div></button>
   </div>
@@ -300,6 +306,19 @@
     <p class="muted" id="resetDesc">Your streak, history, badges and settings will be erased from this phone. This can’t be undone.</p>
     <div class="stack">
       <button class="btn danger" id="confirmReset">Delete everything</button>
+      <button class="btn secondary" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import confirmation -->
+<div class="sheet" id="importSheet" hidden>
+  <div class="panel" role="alertdialog" aria-modal="true" aria-labelledby="importTitle" aria-describedby="importDesc">
+    <div class="grab"></div>
+    <div class="row"><div class="itile"><svg class="i"><use href="#i-upload"/></svg></div><p class="t-head grow" id="importTitle">Import this backup?</p></div>
+    <p class="muted" id="importDesc">This replaces your current data on this phone with the backup. It can’t be undone.</p>
+    <div class="stack">
+      <button class="btn" id="confirmImport">Replace my data</button>
       <button class="btn secondary" data-close>Cancel</button>
     </div>
   </div>
