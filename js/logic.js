@@ -37,6 +37,7 @@ export function defaultState() {
     lastRec: null, // last day whose outcome is settled
     setupDay: null, // the day setup finished, if the streak starts that day; never costs a freeze or a miss
     lock: null,
+    todayTask: null, // { day, id }: a one-day swap of the tiny task
     notice: null, // { text, miss }: missed days to explain on Home until dismissed // { day, goal, win, days }: today's schedule before a mid-window edit
     history: {}, // dayKey -> { status: 'awake'|'done'|'freeze'|'miss', t, goal, task }
     freezes: 1,
@@ -172,6 +173,9 @@ export function todayStatus(st, now) {
   return { ...base, kind: lapsed };
 }
 
+// The tiny task for day `k`: a swap made that day, otherwise the default.
+export const taskFor = (st, k) => (st.todayTask && st.todayTask.day === k ? st.todayTask.id : st.task);
+
 export function tapAwake(st, now) {
   const s = todayStatus(st, now);
   if (s.kind !== 'open') return false;
@@ -182,7 +186,7 @@ export function tapAwake(st, now) {
 export function completeTask(st, now) {
   const k = dayKey(now), r = st.history[k];
   if (!r || r.status !== 'awake' || minutesOf(now) > taskDeadline(r)) return null;
-  st.history[k] = { status: 'done', t: r.t, goal: r.goal, task: st.task };
+  st.history[k] = { status: 'done', t: r.t, goal: r.goal, task: taskFor(st, k) };
   const streak = streakOf(st, k);
   st.longest = Math.max(st.longest, streak);
   let freezeEarned = false;

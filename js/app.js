@@ -1,6 +1,6 @@
 import {
   TASKS, BADGES, defaultState, dayKey, addDays, parseKey, weekday, minutesOf, isScheduled, windowOf,
-  formatTime, finishOnboarding, editSchedule, reconcile, streakOf, todayStatus, tapAwake, completeTask,
+  formatTime, finishOnboarding, editSchedule, reconcile, taskFor, streakOf, todayStatus, tapAwake, completeTask,
   nextMilestone, insightsOf,
 } from './logic.js';
 
@@ -45,7 +45,9 @@ const width = (key, pct) => $$(`[data-bind="${key}"]`).forEach((e) => { e.style.
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const DL = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const DN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const task = () => TASKS.find((t) => t.id === st.task) || TASKS[0];
+const findTask = (id) => TASKS.find((t) => t.id === id) || TASKS[0];
+const task = () => findTask(taskFor(st, dayKey(now()))); // today's task, after any swap
+const defaultTask = () => findTask(st.task);
 const splitTime = (min) => { const [hm, ap] = formatTime(min).split(' '); return { hm, ap }; };
 
 function daysLabel() {
@@ -133,16 +135,19 @@ function paintThemeColor() {
 // ---------- rendering ----------
 let calMonth = null; // {y, m} shown on the Streak screen
 let lastResult = null; // outcome of the latest completed task, for the celebration
+let swapDefault = false; // "Make this my default" in the swap sheet
 
 function render() {
-  const n = now(), today = dayKey(n), status = todayStatus(st, n), t = task();
+  const n = now(), today = dayKey(n), status = todayStatus(st, n), t = defaultTask(), tt = task();
   const streak = streakOf(st, today), goal = splitTime(st.goal), w = windowOf(st);
 
   txt('goal', formatTime(st.goal)); txt('goalH', goal.hm); txt('goalAP', goal.ap);
   txt('close', formatTime(w.close)); txt('dayslabel', daysLabel());
   txt('bedhint', `For 8 hours of sleep, be in bed by ${formatTime(st.goal - 480)}.`);
-  txt('taskname', t.name); txt('taskdesc', t.desc); txt('tasktime', t.time);
+  txt('taskname', t.name);
   $$('[data-task-icon]').forEach((u) => u.setAttribute('href', `#i-${t.icon}`));
+  txt('todayname', tt.name); txt('taskdesc', tt.desc); txt('tasktime', tt.time);
+  $$('[data-today-icon]').forEach((u) => u.setAttribute('href', `#i-${tt.icon}`));
   txt('streak', streak);
   txt('dayword', streak === 1 ? 'day' : 'days');
   txt('longest', st.longest); txt('longword', st.longest === 1 ? 'day' : 'days');
@@ -226,13 +231,16 @@ function renderHome(n, today, s, streak) {
   txt('weektag', `${done} of ${planned} days`);
 }
 
+function taskOptions(selected, attr) {
+  return TASKS.map((x) => {
+    const on = x.id === selected;
+    return `<button class="opt" role="radio" aria-checked="${on}" ${attr}="${x.id}"><div class="itile">${ic(x.icon)}</div><div class="grow"><p class="t-h3">${x.name}</p><p class="t-cap">${x.time}</p></div><span class="radio">${on ? ic('check', 'sm') : ''}</span></button>`;
+  }).join('');
+}
 function renderTaskLists() {
-  $$('[data-tasklist]').forEach((box) => {
-    box.innerHTML = TASKS.map((x) => {
-      const on = x.id === st.task;
-      return `<button class="opt" role="radio" aria-checked="${on}" data-task="${x.id}"><div class="itile">${ic(x.icon)}</div><div class="grow"><p class="t-h3">${x.name}</p><p class="t-cap">${x.time}</p></div><span class="radio">${on ? ic('check', 'sm') : ''}</span></button>`;
-    }).join('');
-  });
+  $$('[data-tasklist]').forEach((box) => { box.innerHTML = taskOptions(st.task, 'data-task'); });
+  $('#swapList').innerHTML = taskOptions(taskFor(st, dayKey(now())), 'data-swap');
+  $('#swapDefault').setAttribute('aria-checked', String(swapDefault));
 }
 
 function renderSchedule() {
@@ -490,6 +498,11 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (d.task) { st.task = d.task; save(); return render(); }
+  if (d.swap) {
+    st.todayTask = { day: dayKey(now()), id: d.swap };
+    if (swapDefault) st.task = d.swap;
+    save(); closeSheets(); return render();
+  }
   if (d.day !== undefined) {
     const days = [...st.days]; days[+d.day] = days[+d.day] ? 0 : 1;
     editSchedule(st, now(), { days }); save(); return render();
@@ -507,7 +520,8 @@ document.addEventListener('click', (e) => {
       replace('celebrate'); renderCelebration(); confetti(); chime();
       return;
     }
-    case 'swapTask': { const i = TASKS.findIndex((x) => x.id === st.task); st.task = TASKS[(i + 1) % TASKS.length].id; save(); return render(); }
+    case 'swapTask': swapDefault = false; render(); return openSheet('swapSheet');
+    case 'swapDefault': swapDefault = !swapDefault; return el.setAttribute('aria-checked', String(swapDefault));
     case 'shareBtn': return openShare();
     case 'doShare': return doShare();
     case 'doSave': return doSave();

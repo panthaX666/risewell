@@ -151,9 +151,9 @@
   <div class="nav"><button class="iconbtn" data-back aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button><p class="t-head">Tiny task</p><span></span></div>
   <div class="mid">
     <p class="t-cap center" data-bind="tappedAt">One step left.</p>
-    <div class="bigico"><svg class="i"><use data-task-icon href="#i-drop"/></svg></div>
+    <div class="bigico"><svg class="i"><use data-today-icon href="#i-drop"/></svg></div>
     <div class="stack center" style="gap:8px;align-items:center">
-      <h1 class="t-title" data-bind="taskname">Drink a glass of water</h1>
+      <h1 class="t-title" data-bind="todayname">Drink a glass of water</h1>
       <p class="muted" style="max-width:30ch" data-bind="taskdesc"></p>
       <span class="tag"><svg class="i sm"><use href="#i-clock"/></svg><span data-bind="tasktime"></span></span>
     </div>
@@ -313,6 +313,18 @@
       <button class="btn danger" id="confirmReset">Delete everything</button>
       <button class="btn secondary" data-close>Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- Swap today's task -->
+<div class="sheet" id="swapSheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="swapTitle">
+    <div class="grab"></div>
+    <div class="card-h"><p class="t-head" id="swapTitle">Swap today’s task</p><button class="iconbtn" data-close aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="card list">
+      <div class="li"><div class="grow"><p class="t-h3">Make this my default</p><p class="t-cap">Use it every day, not just today</p></div><button class="switch" id="swapDefault" role="switch" aria-checked="false" aria-label="Make this my default"></button></div>
+    </div>
+    <div class="stack" role="radiogroup" aria-label="Today’s task" id="swapList"></div>
   </div>
 </div>
 

@@ -213,3 +213,13 @@ test('a miss reports the length of the streak it ended', () => {
   const ev = reconcile(st, at(7, 9)); // the following Monday
   assert.deepEqual(ev.map((e) => [e.type, e.streak]), [['freeze', undefined], ['miss', 5], ['miss', 0]]);
 });
+
+test('a swapped task counts for that day only', () => {
+  const st = started();
+  st.todayTask = { day: dayKey(at(0, 0)), id: 'pushups' };
+  wake(st, 0);
+  assert.equal(st.history[dayKey(at(0, 0))].task, 'pushups');
+  assert.equal(st.task, 'water');
+  wake(st, 1);
+  assert.equal(st.history[dayKey(at(1, 0))].task, 'water');
+});
