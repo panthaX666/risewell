@@ -33,6 +33,8 @@ function keepData() {
 const pinned = new URLSearchParams(location.search).get('now');
 const offset = pinned && !isNaN(Date.parse(pinned)) ? Date.parse(pinned) - Date.now() : 0;
 const now = () => new Date(Date.now() + offset);
+// `?alarmtest=1` shows a trial link that asks Android's Clock app to set the alarm.
+const alarmTest = new URLSearchParams(location.search).get('alarmtest') === '1';
 
 // ---------- helpers ----------
 const $ = (s, r = document) => r.querySelector(s);
@@ -255,6 +257,10 @@ function renderSchedule() {
   if (lock) {
     const s = todayStatus(st, now());
     txt('locknote', s.kind === 'open' ? `Changes apply from tomorrow. Today still counts if you tap by ${formatTime(s.close)}.` : 'Changes apply from tomorrow.');
+  }
+  $('#alarmTest').hidden = !alarmTest;
+  if (alarmTest) {
+    $('#alarmTest').href = `intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR=${Math.floor(st.goal / 60)};i.android.intent.extra.alarm.MINUTES=${st.goal % 60};S.android.intent.extra.alarm.MESSAGE=Risewell;end`;
   }
   $$('#winseg button').forEach((b) => b.setAttribute('aria-checked', String(+b.dataset.win === st.win)));
 }

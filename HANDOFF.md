@@ -70,6 +70,17 @@ Welcome → Wake goal (setup 1 of 2) → First task (setup 2 of 2) → **Home** 
 - Buttons: primary (Ember, raised), secondary (flat), text. One line-icon set, drawn as an SVG sprite in `index.html`. No emoji.
 - Dark text on orange fills, for contrast. Honors `prefers-reduced-motion`.
 
+## Clock app shortcut test (R11, needs the owner's phone)
+
+A test-only link on the Wake goal screen asks Android's Clock app to set an alarm at the wake goal. It appears only when the URL contains `?alarmtest=1`; normal users never see it. If the test works, turning it into a normal button is a separate item.
+
+1. On the PC, run `npm start`. Find the PC's local IP address.
+2. With the phone on the same Wi-Fi, open `http://<PC-IP>:8765/?alarmtest=1` in Chrome. Use the GitHub Pages URL with `?alarmtest=1` instead if Pages is live.
+3. Go to Me → Wake goal and tap the test link.
+4. Record the result: Clock opens with the time filled in / Clock opens without the time / nothing happens / error.
+
+Result: ______________________________
+
 ## Open ideas raised but not built
 
 - Replace the SVG sun with a proper illustration set; add celebration sound design beyond the current three-note chime; a design handoff spec.
