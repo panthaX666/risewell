@@ -184,7 +184,7 @@ function renderHome(n, today, s, streak) {
       html = line(`Tapped at ${formatTime(s.rec.t)}. Finish by ${formatTime(s.due)} to count it.`) + `<button class="btn big" data-go="doing">${ic('check')}Finish your tiny task</button>`;
       break;
     case 'done':
-      html = card('check', 'good', 'Streak secured', `Up at ${formatTime(s.rec.t)}. See you ${nextWakeLabel(today).replace(/ at .*/, '').toLowerCase()}.`);
+      html = card('check', 'good', 'Streak secured', `Up at ${formatTime(s.rec.t)}. See you ${nextWakeLabel(today).replace(/ at .*/, '').replace('Tomorrow', 'tomorrow')}.`);
       break;
     case 'freeze':
       html = card('snow', 'cold', 'A freeze saved your streak', `You missed today’s window. Next wake: ${nextWakeLabel(today)}.`);
@@ -524,6 +524,7 @@ document.addEventListener('click', (e) => {
   }
   if (d.day !== undefined) {
     const days = [...st.days]; days[+d.day] = days[+d.day] ? 0 : 1;
+    if (!days.some(Boolean)) return toast('Keep at least one wake day.');
     editSchedule(st, now(), { days }); save(); return render();
   }
   if (d.win) { editSchedule(st, now(), { win: +d.win }); save(); return render(); }
