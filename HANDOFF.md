@@ -38,14 +38,16 @@ A wake-up streak game. Each morning you tap **I’m Awake**, do a tiny task that
 | `css/app.css` | Design tokens and components, light and dark themes |
 | `js/logic.js` | Streak rules as pure functions (no DOM), covered by tests |
 | `js/app.js` | Navigation (mirrors the Android back button via the History API), rendering, storage, share image, theme, sound |
-| `sw.js` | Offline cache, cache-first. Bump `VERSION` when any cached file changes |
+| `sw.js` | Offline cache, cache-first. Bump `VERSION` when any cached file changes, then run `npm run stamp` |
 | `manifest.webmanifest` | Install metadata and icons |
-| `tests/logic.test.mjs` | 11 `node --test` tests, all passing |
+| `tests/logic.test.mjs` | Streak rule tests (`node --test`) |
+| `tests/sw.test.mjs` | Fails when a cached file changed without a new `VERSION` and stamp |
+| `tools/stamp.mjs` | Writes the `files-hash` line in `sw.js`; refuses until `VERSION` is bumped |
 | `tools/make-icons.mjs` | Draws the app icon (sun over hills) into `icons/*.png` with no dependencies |
 | `tools/build.mjs` | Copies the app files into `dist/` for any static host |
 | `prototype/risewell.html` | The original clickable design prototype |
 
-Commands: `npm test`, `npm start` (serves at http://localhost:8765), `npm run build`, `npm run icons`. Add `?now=2026-09-28T06:40` to the URL to pin the clock and test a morning at any hour.
+Commands: `npm test`, `npm run stamp`, `npm start` (serves at http://localhost:8765), `npm run build`, `npm run icons`. Add `?now=2026-09-28T06:40` to the URL to pin the clock and test a morning at any hour.
 
 ## Screens (11)
 
