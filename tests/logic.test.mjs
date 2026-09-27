@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   defaultState, finishOnboarding, reconcile, streakOf, todayStatus, tapAwake,
-  completeTask, dayKey, addDays, insightsOf, editSchedule, windowOf,
+  completeTask, dayKey, addDays, insightsOf, editSchedule, windowOf, nextStreakBadge, prevStreakBadge, badgeList,
 } from '../js/logic.js';
 
 // Monday 2026-09-28 is the first day of every scenario.
@@ -222,4 +222,26 @@ test('a swapped task counts for that day only', () => {
   assert.equal(st.task, 'water');
   wake(st, 1);
   assert.equal(st.history[dayKey(at(1, 0))].task, 'water');
+});
+
+test('streak badges follow 7, 10, 14, 30, 50, 75, 100, then every 100', () => {
+  assert.deepEqual([0, 7, 9, 10, 14, 29, 30, 50, 75, 99, 100, 150, 200].map(nextStreakBadge),
+    [7, 10, 10, 14, 30, 30, 50, 75, 100, 100, 200, 200, 300]);
+  assert.deepEqual([0, 6, 7, 13, 99, 100, 250].map(prevStreakBadge), [0, 0, 7, 10, 75, 100, 200]);
+  const st = started();
+  let r;
+  for (let d = 0; d < 10; d++) r = wake(st, d);
+  assert.deepEqual(r.earned, ['d10']);
+  assert.ok(st.badges.d7 && !st.badges.d14);
+  assert.deepEqual(badgeList(st).map((b) => [b.id, !!b.earned]),
+    [['d7', true], ['d10', true], ['d14', false], ['early', false], ['saver', false]]);
+});
+
+test('a long streak earns every badge it passed', () => {
+  const st = started();
+  for (let d = 0; d < 199; d++) wake(st, d);
+  const r = wake(st, 199);
+  assert.deepEqual(r.earned, ['d200']);
+  assert.deepEqual(Object.keys(st.badges).filter((id) => id.startsWith('d')).sort(),
+    ['d10', 'd100', 'd14', 'd200', 'd30', 'd50', 'd7', 'd75']);
 });

@@ -1,7 +1,7 @@
 import {
-  TASKS, BADGES, defaultState, dayKey, addDays, parseKey, weekday, minutesOf, isScheduled, windowOf,
+  TASKS, badgeInfo, badgeList, defaultState, dayKey, addDays, parseKey, weekday, minutesOf, isScheduled, windowOf,
   formatTime, finishOnboarding, editSchedule, reconcile, taskFor, streakOf, todayStatus, tapAwake, completeTask,
-  nextMilestone, insightsOf,
+  nextStreakBadge, prevStreakBadge, insightsOf,
 } from './logic.js';
 
 // ---------- state ----------
@@ -165,8 +165,8 @@ function renderHome(n, today, s, streak) {
   const hour = n.getHours();
   txt('greeting', hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening');
   txt('date', n.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }));
-  const target = nextMilestone(streak), left = target - streak;
-  txt('milestone', `${plural(left, 'day')} to your ${target}-day ${target <= 30 ? 'badge' : 'milestone'}`);
+  const target = nextStreakBadge(streak), left = target - streak;
+  txt('milestone', `${plural(left, 'day')} to your ${target}-day badge`);
   $('#ring').style.strokeDashoffset = (552.9 * (1 - Math.min(1, streak / target))).toFixed(1);
 
   const card = (tile, cls, title, sub) => `<div class="card"><div class="row"><div class="itile ${cls}">${ic(tile)}</div><div class="grow"><p class="t-h3">${title}</p><p class="t-cap">${sub}</p></div></div></div>`;
@@ -274,8 +274,8 @@ function renderSchedule() {
 }
 
 function renderStreak(n, today, streak) {
-  const target = nextMilestone(streak), prev = [0, 7, 14, 30, 60, 100, 200, 365].filter((x) => x < target).pop() || 0;
-  txt('nextbadge', `Next: ${target}-day ${target <= 30 ? 'badge' : 'milestone'}`);
+  const target = nextStreakBadge(streak), prev = prevStreakBadge(streak);
+  txt('nextbadge', `Next: ${target}-day badge`);
   txt('nextbadgesub', `${plural(target - streak, 'day')} to go`);
   width('nextbar', ((streak - prev) / (target - prev)) * 100);
   txt('freezes', plural(st.freezes, 'streak freeze'));
@@ -324,10 +324,10 @@ function renderStats(today) {
 }
 
 function renderMe() {
-  const earned = BADGES.filter((b) => st.badges[b.id]).length;
-  txt('badgecount', `${earned} of ${BADGES.length}`);
-  $('#badges').innerHTML = BADGES.map((b) => {
-    const on = !!st.badges[b.id];
+  const list = badgeList(st);
+  txt('badgecount', `${list.filter((b) => b.earned).length} earned`);
+  $('#badges').innerHTML = list.map((b) => {
+    const on = !!b.earned;
     return `<div class="badge${on ? '' : ' locked'}"><div class="itile">${ic(on ? b.icon : 'lock')}</div><span>${b.name}</span></div>`;
   }).join('');
   $$('#themeseg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.themeSet === st.theme)));
@@ -342,13 +342,13 @@ function renderCelebration() {
     ? `Up at ${formatTime(r.t)}, ${r.goal - r.t ? `${plural(r.goal - r.t, 'minute')} before your goal` : 'right on your goal'}.`
     : `Up at ${formatTime(r.t)}, ${plural(Math.max(0, close - r.t), 'minute')} before your window closed.`);
   const rewards = r.earned.map((id) => {
-    const b = BADGES.find((x) => x.id === id);
+    const b = badgeInfo(id);
     return { icon: b.icon, title: `New badge: ${b.name}`, sub: 'See all your badges on the Me tab.' };
   });
   if (r.freezeEarned) rewards.push({ icon: 'snow', title: 'You earned a streak freeze', sub: 'It covers one missed day automatically.' });
   if (!rewards.length) {
-    const target = nextMilestone(r.streak);
-    rewards.push({ icon: 'medal', title: `${plural(target - r.streak, 'day')} to your ${target}-day ${target <= 30 ? 'badge' : 'milestone'}`, sub: 'Wake up tomorrow to keep going.' });
+    const target = nextStreakBadge(r.streak);
+    rewards.push({ icon: 'medal', title: `${plural(target - r.streak, 'day')} to your ${target}-day badge`, sub: 'Wake up tomorrow to keep going.' });
   }
   $('#celextra').innerHTML = rewards.map((x) => `<div class="row"><div class="itile">${ic(x.icon)}</div><div class="grow"><p class="t-h3">${x.title}</p><p class="t-cap">${x.sub}</p></div></div>`).join('');
 }

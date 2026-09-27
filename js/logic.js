@@ -6,7 +6,7 @@ export const EARLY_MINUTES = 120; // "I'm Awake" opens this long before the goal
 export const TASK_MINUTES = 60; // the tiny task must be done this long after the tap
 export const MAX_FREEZES = 2;
 export const FREEZE_EVERY = 14; // earn a freeze at every 14-day multiple
-export const MILESTONES = [7, 14, 30, 60, 100, 200, 365];
+export const STREAK_BADGES = [7, 10, 14, 30, 50, 75, 100]; // then one every 100 days
 
 export const TASKS = [
   { id: 'water', icon: 'drop', name: 'Drink a glass of water', desc: 'Fill a glass, drink it, and come back.', time: 'About 30 seconds' },
@@ -17,13 +17,17 @@ export const TASKS = [
   { id: 'outside', icon: 'door', name: 'Step outside', desc: 'Open the door and take five slow breaths.', time: 'About 30 seconds' },
 ];
 
-export const BADGES = [
-  { id: 'd7', name: '7 days', icon: 'sprout' },
+// Streak badges have ids "d<days>"; the others are fixed.
+export const OTHER_BADGES = [
   { id: 'early', name: 'Up before 6 AM', icon: 'sunrise' },
   { id: 'saver', name: 'Freeze saver', icon: 'snow' },
-  { id: 'd14', name: '14 days', icon: 'medal' },
-  { id: 'd30', name: '30 days', icon: 'crown' },
 ];
+const STREAK_ICONS = { 7: 'sprout', 10: 'star', 14: 'medal', 30: 'crown', 50: 'flame', 75: 'sun' };
+export function badgeInfo(id) {
+  const n = Number(id.match(/^d(\d+)$/)?.[1]);
+  if (n) return { id, days: n, name: `${n} days`, icon: STREAK_ICONS[n] || 'crown' };
+  return OTHER_BADGES.find((b) => b.id === id);
+}
 
 export function defaultState() {
   return {
@@ -196,15 +200,28 @@ export function completeTask(st, now) {
   }
   const earned = [];
   const award = (id) => { if (!st.badges[id]) { st.badges[id] = k; earned.push(id); } };
-  if (streak >= 7) award('d7');
-  if (streak >= 14) award('d14');
-  if (streak >= 30) award('d30');
+  for (let d = STREAK_BADGES[0]; d <= streak; d = nextStreakBadge(d)) award(`d${d}`);
   if (r.t < 360) award('early');
   return { streak, t: r.t, goal: r.goal, freezeEarned, earned };
 }
 
-export function nextMilestone(streak) {
-  return MILESTONES.find((x) => x > streak) ?? streak + 100;
+// The first streak badge above `streak`, and the last one at or below it (0 if none).
+export function nextStreakBadge(streak) {
+  return STREAK_BADGES.find((x) => x > streak) ?? (Math.floor(streak / 100) + 1) * 100;
+}
+export function prevStreakBadge(streak) {
+  if (streak >= 100) return Math.floor(streak / 100) * 100;
+  return STREAK_BADGES.filter((x) => x <= streak).pop() || 0;
+}
+
+// Badges for the Me screen: streak badges earned so far and the next one to
+// earn, then the other badges. `earned` is the day it was won, or undefined.
+export function badgeList(st) {
+  const streakDays = Object.keys(st.badges).map((id) => badgeInfo(id)?.days).filter(Boolean).sort((a, b) => a - b);
+  const next = nextStreakBadge(streakDays[streakDays.length - 1] || 0);
+  return [...streakDays, next].map((d) => badgeInfo(`d${d}`))
+    .concat(OTHER_BADGES)
+    .map((b) => ({ ...b, earned: st.badges[b.id] }));
 }
 
 // Numbers for the Insights screen, over the last 30 days.
