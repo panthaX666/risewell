@@ -121,7 +121,7 @@ function back() { if (stack.length > 1) history.back(); }
 addEventListener('popstate', () => {
   if (skipPop) { skipPop = false; return; }
   const open = $$('.sheet').find((s) => !s.hidden);
-  if (open) { open.hidden = true; return; }
+  if (open) { hideSheet(open); return; }
   if (stack.length > 1) { stack.pop(); show(stack[stack.length - 1]); }
 });
 const current = () => stack[stack.length - 1];
@@ -415,8 +415,7 @@ function drawCard() {
   return c;
 }
 function openShare() {
-  $('#shareSheet').hidden = false;
-  history.pushState({ d: stack.length, sheet: 1 }, '');
+  openSheet('shareSheet');
   const make = () => drawCard().toBlob((b) => {
     shareBlob = b;
     const img = $('#shareImg');
@@ -463,10 +462,30 @@ async function importBackup(file) {
   openSheet('importSheet');
 }
 
+// Sheets take focus while open and hand it back when they close.
+let sheetReturn = null;
 function openSheet(id) {
-  $(`#${id}`).hidden = false;
+  const sheet = $(`#${id}`);
+  sheetReturn = document.activeElement;
+  sheet.hidden = false;
   history.pushState({ d: stack.length, sheet: 1 }, '');
+  $('.panel button', sheet)?.focus();
 }
+function hideSheet(sheet) {
+  sheet.hidden = true;
+  if (sheetReturn?.isConnected) sheetReturn.focus();
+  sheetReturn = null;
+}
+const focusables = (box) => $$('button, a[href], input:not([hidden])', box).filter((x) => !x.disabled && x.offsetParent !== null);
+document.addEventListener('keydown', (e) => {
+  const open = e.key === 'Tab' && $$('.sheet').find((s) => !s.hidden);
+  if (!open) return;
+  const f = focusables($('.panel', open)), first = f[0], last = f[f.length - 1];
+  if (!first) return;
+  if (!open.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+  else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 function closeSheets() {
   const open = $$('.sheet').some((s) => !s.hidden);
   if (open) history.back();
@@ -527,7 +546,7 @@ document.addEventListener('click', (e) => {
     case 'doSave': return doSave();
     case 'noticeClose': st.notice = null; save(); return render();
     case 'soundSw': st.sound = !st.sound; save(); return render();
-    case 'resetBtn': $('#resetSheet').hidden = false; history.pushState({ d: stack.length, sheet: 1 }, ''); return;
+    case 'resetBtn': return openSheet('resetSheet');
     case 'confirmReset': st = defaultState(); save(); applyTheme(); $('#resetSheet').hidden = true; skipPop = true; history.back(); return reset('welcome');
     case 'exportBtn': return exportBackup();
     case 'importBtn': return $('#importFile').click();
