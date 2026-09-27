@@ -290,19 +290,16 @@ function renderCelebration() {
   txt('celmsg', r.t <= r.goal
     ? `Up at ${formatTime(r.t)}, ${r.goal - r.t ? `${plural(r.goal - r.t, 'minute')} before your goal` : 'right on your goal'}.`
     : `Up at ${formatTime(r.t)}, ${plural(Math.max(0, close - r.t), 'minute')} before your window closed.`);
-  let icon = 'medal', title, sub;
-  if (r.earned.length) {
-    const b = BADGES.find((x) => x.id === r.earned[0]);
-    icon = b.icon; title = `New badge: ${b.name}`; sub = 'See all your badges on the Me tab.';
-  } else if (r.freezeEarned) {
-    icon = 'snow'; title = 'You earned a streak freeze'; sub = 'It covers one missed day automatically.';
-  } else {
+  const rewards = r.earned.map((id) => {
+    const b = BADGES.find((x) => x.id === id);
+    return { icon: b.icon, title: `New badge: ${b.name}`, sub: 'See all your badges on the Me tab.' };
+  });
+  if (r.freezeEarned) rewards.push({ icon: 'snow', title: 'You earned a streak freeze', sub: 'It covers one missed day automatically.' });
+  if (!rewards.length) {
     const target = nextMilestone(r.streak);
-    title = `${plural(target - r.streak, 'day')} to your ${target}-day ${target <= 30 ? 'badge' : 'milestone'}`;
-    sub = 'Wake up tomorrow to keep going.';
+    rewards.push({ icon: 'medal', title: `${plural(target - r.streak, 'day')} to your ${target}-day ${target <= 30 ? 'badge' : 'milestone'}`, sub: 'Wake up tomorrow to keep going.' });
   }
-  $('[data-cel-icon]').setAttribute('href', `#i-${icon}`);
-  txt('celtitle', title); txt('celsub', sub);
+  $('#celextra').innerHTML = rewards.map((x) => `<div class="row"><div class="itile">${ic(x.icon)}</div><div class="grow"><p class="t-h3">${x.title}</p><p class="t-cap">${x.sub}</p></div></div>`).join('');
 }
 
 function confetti() {
