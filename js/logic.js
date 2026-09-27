@@ -20,7 +20,7 @@ export const TASKS = [
 
 export const BADGES = [
   { id: 'd7', name: '7 days', icon: 'sprout' },
-  { id: 'early', name: 'Up before 6', icon: 'sunrise' },
+  { id: 'early', name: 'Up before 6 AM', icon: 'sunrise' },
   { id: 'saver', name: 'Freeze saver', icon: 'snow' },
   { id: 'd14', name: '14 days', icon: 'medal' },
   { id: 'd30', name: '30 days', icon: 'crown' },

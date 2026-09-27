@@ -198,8 +198,7 @@ function renderTaskLists() {
 function renderSchedule() {
   $$('[data-timepicker]').forEach((box) => {
     if (!box.firstChild) {
-      box.innerHTML = `<p class="t-label">Wake goal</p>
-        <div class="stepper">
+      box.innerHTML = `<div class="stepper">
           <button class="iconbtn" data-time="-15" aria-label="15 minutes earlier">${ic('minus')}</button>
           <button class="time" data-pick-time aria-label="Set exact wake time"><span class="t-display num" data-bind="goalH"></span><small data-bind="goalAP"></small></button>
           <button class="iconbtn" data-time="15" aria-label="15 minutes later">${ic('plus')}</button>
@@ -270,7 +269,7 @@ function renderMe() {
   txt('badgecount', `${earned} of ${BADGES.length}`);
   $('#badges').innerHTML = BADGES.map((b) => {
     const on = !!st.badges[b.id];
-    return `<div class="stack" style="gap:6px;align-items:center;text-align:center${on ? '' : ';opacity:.45'}"><div class="itile" style="width:48px;height:48px">${ic(on ? b.icon : 'lock')}</div><span class="t-cap" style="font-size:11px;line-height:1.2">${b.name}</span></div>`;
+    return `<div class="badge${on ? '' : ' locked'}"><div class="itile">${ic(on ? b.icon : 'lock')}</div><span>${b.name}</span></div>`;
   }).join('');
   $$('#themeseg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.themeSet === st.theme)));
   $('#soundSw').setAttribute('aria-checked', String(st.sound));
