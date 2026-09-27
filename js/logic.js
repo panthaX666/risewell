@@ -4,8 +4,6 @@
 
 export const EARLY_MINUTES = 120; // "I'm Awake" opens this long before the goal
 export const TASK_MINUTES = 60; // the tiny task must be done this long after the tap
-export const POINTS_PER_WAKE = 20;
-export const POINTS_PER_LEVEL = 500;
 export const MAX_FREEZES = 2;
 export const FREEZE_EVERY = 14; // earn a freeze at every 14-day multiple
 export const MILESTONES = [7, 14, 30, 60, 100, 200, 365];
@@ -41,7 +39,6 @@ export function defaultState() {
     lock: null, // { day, goal, win, days }: today's schedule before a mid-window edit
     history: {}, // dayKey -> { status: 'awake'|'done'|'freeze'|'miss', t, goal, task }
     freezes: 1,
-    points: 0,
     longest: 0,
     badges: {}, // badgeId -> dayKey earned
     theme: 'system',
@@ -183,7 +180,6 @@ export function completeTask(st, now) {
   const k = dayKey(now), r = st.history[k];
   if (!r || r.status !== 'awake' || minutesOf(now) > taskDeadline(r)) return null;
   st.history[k] = { status: 'done', t: r.t, goal: r.goal, task: st.task };
-  st.points += POINTS_PER_WAKE;
   const streak = streakOf(st, k);
   st.longest = Math.max(st.longest, streak);
   let freezeEarned = false;
@@ -197,15 +193,11 @@ export function completeTask(st, now) {
   if (streak >= 14) award('d14');
   if (streak >= 30) award('d30');
   if (r.t < 360) award('early');
-  return { streak, t: r.t, goal: r.goal, gained: POINTS_PER_WAKE, freezeEarned, earned };
+  return { streak, t: r.t, goal: r.goal, freezeEarned, earned };
 }
 
 export function nextMilestone(streak) {
   return MILESTONES.find((x) => x > streak) ?? streak + 100;
-}
-
-export function levelOf(points) {
-  return { level: Math.floor(points / POINTS_PER_LEVEL) + 1, into: points % POINTS_PER_LEVEL, toNext: POINTS_PER_LEVEL - (points % POINTS_PER_LEVEL) };
 }
 
 // Numbers for the Insights screen, over the last 30 days.

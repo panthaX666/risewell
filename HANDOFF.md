@@ -49,7 +49,7 @@ Commands: `npm test`, `npm start` (serves at http://localhost:8765), `npm run bu
 
 ## Screens (11)
 
-Welcome → Wake goal (setup 1 of 2) → First task (setup 2 of 2) → **Home** · Tiny task · Celebration · **Streak** (calendar, next badge, freezes, link to Insights) · Wake goal settings · Task library · Insights · **Me** (level, badges, wake goal, task, theme, sound, delete all data). The tab bar has three tabs: Today, Streak and Me.
+Welcome → Wake goal (setup 1 of 2) → First task (setup 2 of 2) → **Home** · Tiny task · Celebration · **Streak** (calendar, next badge, freezes, link to Insights) · Wake goal settings · Task library · Insights · **Me** (badges, wake goal, task, theme, sound, delete all data). The tab bar has three tabs: Today, Streak and Me.
 
 ## Streak rules (in `js/logic.js`)
 
@@ -58,7 +58,6 @@ Welcome → Wake goal (setup 1 of 2) → First task (setup 2 of 2) → **Home** 
 - The streak starts on setup day if that day's window has not closed yet, otherwise the next day. Setup day never uses a freeze or counts as a miss: finishing it adds to the streak, missing it costs nothing.
 - A scheduled day without a finished task uses a **streak freeze** if one is left, otherwise it is recorded as a miss and the streak resets. Days off never break the streak or add to it.
 - You start with 1 freeze and earn 1 at every 14-day multiple, up to a maximum of 2.
-- 20 points per wake-up, 500 points per level.
 - Badges: 7 days, Up before 6 AM, Freeze saver, 14 days, 30 days. Milestones after that: 60, 100, 200 and 365 days.
 - Insights appear after 3 wake-ups: average wake time, hit rate over 30 days, a 7-day chart of minutes after the goal, and a tip when weekends run 10 or more minutes later than weekdays.
 - Missed days are settled (`reconcile`) on launch, every 30 seconds, and whenever the app returns to the front. The app shows a toast when a freeze was used or the streak reset.

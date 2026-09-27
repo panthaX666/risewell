@@ -41,7 +41,6 @@ test('tap alone does not count until the task is done', () => {
   assert.equal(streakOf(st, dayKey(at(0, 0))), 0);
   const r = completeTask(st, at(0, 6, 41));
   assert.equal(r.streak, 1);
-  assert.equal(st.points, 20);
 });
 
 test('consecutive days build the streak and longest', () => {

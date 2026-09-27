@@ -1,7 +1,7 @@
 import {
   TASKS, BADGES, defaultState, dayKey, addDays, parseKey, weekday, minutesOf, isScheduled, windowOf,
   formatTime, finishOnboarding, editSchedule, reconcile, streakOf, todayStatus, tapAwake, completeTask,
-  nextMilestone, levelOf, insightsOf,
+  nextMilestone, insightsOf,
 } from './logic.js';
 
 // ---------- state ----------
@@ -10,9 +10,15 @@ let st = load();
 function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (saved && saved.v === 1) return Object.assign(defaultState(), saved);
+    if (saved && saved.v === 1) return fromSaved(saved);
   } catch (e) { /* fall through to a fresh state */ }
   return defaultState();
+}
+// Keep only the fields the app knows, so retired ones (like the old score) drop out.
+function fromSaved(saved) {
+  const st = defaultState();
+  for (const k of Object.keys(st)) if (k in saved) st[k] = saved[k];
+  return st;
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { toast('Could not save. Check that storage is not full.'); }
@@ -103,7 +109,7 @@ let lastResult = null; // outcome of the latest completed task, for the celebrat
 
 function render() {
   const n = now(), today = dayKey(n), status = todayStatus(st, n), t = task();
-  const streak = streakOf(st, today), lv = levelOf(st.points), goal = splitTime(st.goal), w = windowOf(st);
+  const streak = streakOf(st, today), goal = splitTime(st.goal), w = windowOf(st);
 
   txt('goal', formatTime(st.goal)); txt('goalH', goal.hm); txt('goalAP', goal.ap);
   txt('close', formatTime(w.close)); txt('dayslabel', daysLabel());
@@ -113,10 +119,6 @@ function render() {
   txt('streak', streak);
   txt('dayword', streak === 1 ? 'day' : 'days');
   txt('longest', st.longest); txt('longword', st.longest === 1 ? 'day' : 'days');
-  txt('level', `Level ${lv.level}`); txt('points', plural(st.points, 'point'));
-  txt('levelnext', `${plural(lv.toNext, 'point')} to Level ${lv.level + 1}`);
-  txt('levelhint', `Level ${lv.level} · ${plural(lv.toNext, 'point')} to Level ${lv.level + 1}`);
-  width('levelbar', (lv.into / 500) * 100);
 
   renderHome(n, today, status, streak);
   renderTaskLists();

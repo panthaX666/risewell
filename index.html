@@ -165,10 +165,6 @@
       <h1 class="t-title" data-bind="streakword">day streak</h1>
       <p class="muted" style="margin-top:4px" data-bind="celmsg"></p>
     </div>
-    <div class="suncard">
-      <div class="row"><div class="itile"><svg class="i"><use href="#i-star"/></svg></div><div class="grow"><p class="t-h3">+20 points</p><p class="t-cap num" data-bind="levelhint"></p></div></div>
-      <div class="bar"><i data-bind="levelbar"></i></div>
-    </div>
     <div class="suncard" id="celextra">
       <div class="row"><div class="itile"><svg class="i"><use data-cel-icon href="#i-medal"/></svg></div><div class="grow"><p class="t-h3" data-bind="celtitle"></p><p class="t-cap" data-bind="celsub"></p></div></div>
     </div>
@@ -261,11 +257,6 @@
 <section class="screen tabbed" id="me" data-tab="me">
   <div class="hdr"><h1 class="t-title">Me</h1></div>
   <div class="card">
-    <div class="card-h"><p class="t-h3" data-bind="level">Level 1</p><span class="t-cap num" data-bind="points">0 points</span></div>
-    <div class="bar"><i data-bind="levelbar"></i></div>
-    <p class="t-cap num" data-bind="levelnext"></p>
-  </div>
-  <div class="card">
     <div class="card-h"><p class="t-h3">Badges</p><span class="t-cap num" data-bind="badgecount"></span></div>
     <div class="badges" id="badges"></div>
   </div>
@@ -304,7 +295,7 @@
   <div class="panel" role="alertdialog" aria-modal="true" aria-labelledby="resetTitle" aria-describedby="resetDesc">
     <div class="grab"></div>
     <div class="row"><div class="itile bad"><svg class="i"><use href="#i-trash"/></svg></div><p class="t-head grow" id="resetTitle">Delete all data?</p></div>
-    <p class="muted" id="resetDesc">Your streak, history, points and badges will be erased from this phone. This can’t be undone.</p>
+    <p class="muted" id="resetDesc">Your streak, history, badges and settings will be erased from this phone. This can’t be undone.</p>
     <div class="stack">
       <button class="btn danger" id="confirmReset">Delete everything</button>
       <button class="btn secondary" data-close>Cancel</button>
