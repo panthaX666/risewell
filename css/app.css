@@ -131,14 +131,15 @@ a.btn{text-decoration:none}
 .cta{display:flex;flex-direction:column;gap:10px}
 .deadline{display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:800;color:var(--ink2);text-align:center}
 .deadline b{color:var(--accent-text)}
-.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
-.wd{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--ink2)}
-.dot{width:36px;height:36px;border-radius:50%;background:var(--surface2);display:grid;place-items:center;color:var(--on-accent)}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+.wd{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;font-size:12px;font-weight:800;color:var(--ink2)}
+.dot{width:min(36px,100%);aspect-ratio:1;height:auto;border-radius:50%;background:var(--surface2);display:grid;place-items:center;color:var(--on-accent)}
 .dot.done{background:var(--accent)}
 .dot.freeze{background:var(--sky);color:#2B1B3D}
 .dot.miss{background:transparent;box-shadow:inset 0 0 0 2px var(--bad);color:var(--bad)}
 .dot.off{background:transparent;border:1.5px dashed var(--line)}
 .dot.today{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink)}
+.dot.miss.today{box-shadow:inset 0 0 0 2px var(--bad),0 0 0 2px var(--surface),0 0 0 4px var(--ink)}
 
 /* ---------- Streak calendar ---------- */
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px 4px;text-align:center}
@@ -150,6 +151,7 @@ a.btn{text-decoration:none}
 .cal .c.future{opacity:.45}
 .cal .c.today{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink);color:var(--ink)}
 .cal .c.today.done{color:var(--on-accent)}
+.cal .c.miss.today{box-shadow:inset 0 0 0 2px var(--bad),0 0 0 2px var(--surface),0 0 0 4px var(--ink);color:var(--bad)}
 .legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:12px;font-weight:800;color:var(--ink2)}
 .legend span{display:flex;align-items:center;gap:6px}
 .legend i{width:12px;height:12px;border-radius:50%;display:block}
