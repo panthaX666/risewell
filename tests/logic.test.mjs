@@ -6,7 +6,7 @@ import {
 } from '../js/logic.js';
 
 // Monday 2026-09-28 is the first day of every scenario.
-const at = (day, h, m = 0) => { const d = new Date(2026, 8, 28 + day); d.setHours(h, m, 0, 0); return d; };
+const at = (day, h, m = 0, s = 0) => { const d = new Date(2026, 8, 28 + day); d.setHours(h, m, s, 0); return d; };
 
 function started(opts = {}) {
   const st = Object.assign(defaultState(), { goal: 390, win: 30 }, opts); // 6:30 to 7:00
@@ -79,13 +79,13 @@ test('days off do not break or add to the streak', () => {
   assert.equal(wake(st, 7).streak, 6);
 });
 
-test('tapped but unfinished task becomes a miss after its 60 minutes', () => {
+test('tapped but unfinished task becomes a miss after its 3 minutes', () => {
   const st = started({ freezes: 0 });
   wake(st, 0);
   tapAwake(st, at(1, 6, 40));
-  reconcile(st, at(1, 7, 40)); // task still due until 7:40
+  reconcile(st, at(1, 6, 43)); // task still due until 6:43:00
   assert.equal(st.history[dayKey(at(1, 0))].status, 'awake');
-  reconcile(st, at(1, 7, 41));
+  reconcile(st, at(1, 6, 43, 1));
   assert.equal(st.history[dayKey(at(1, 0))].status, 'miss');
 });
 
@@ -151,29 +151,36 @@ test('a tap under a locked schedule records the locked goal', () => {
   assert.equal(st.history[dayKey(at(0, 0))].goal, 540);
 });
 
-test('the tiny task counts within 60 minutes of the tap', () => {
+test('the tiny task counts within 3 minutes of the tap, to the second', () => {
   const st = started({ goal: 420 }); // window closes 7:30
-  tapAwake(st, at(0, 7, 0));
-  assert.equal(todayStatus(st, at(0, 7, 30)).due, 480);
-  assert.equal(completeTask(st, at(0, 7, 59)).streak, 1);
+  tapAwake(st, at(0, 7, 0, 50));
+  assert.equal(todayStatus(st, at(0, 7, 2)).due, 7 * 3600 + 3 * 60 + 50);
+  assert.equal(completeTask(st, at(0, 7, 3, 50)).streak, 1);
 });
 
-test('the tiny task no longer counts after 60 minutes', () => {
+test('the tiny task no longer counts after 3 minutes', () => {
   const st = started({ goal: 420 });
-  tapAwake(st, at(0, 7, 0));
-  assert.equal(completeTask(st, at(0, 8, 1)), null);
-  assert.equal(todayStatus(st, at(0, 8, 1)).kind, 'closed');
+  tapAwake(st, at(0, 7, 0, 50));
+  assert.equal(completeTask(st, at(0, 7, 3, 51)), null);
+  assert.equal(todayStatus(st, at(0, 7, 3, 51)).kind, 'closed');
 });
 
-test('an unfinished task is settled once its 60 minutes pass', () => {
+test('an unfinished task is settled once its 3 minutes pass', () => {
   const st = started({ goal: 420 });
   tapAwake(st, at(0, 7, 0));
-  assert.deepEqual(reconcile(st, at(0, 8, 0)), []);
-  const ev = reconcile(st, at(0, 8, 1));
+  assert.deepEqual(reconcile(st, at(0, 7, 3)), []);
+  const ev = reconcile(st, at(0, 7, 3, 1));
   assert.deepEqual(ev, [{ type: 'freeze', day: dayKey(at(0, 0)) }]);
   const early = started({ goal: 540 }); // tapped at 7:30, window open until 9:30
   tapAwake(early, at(0, 7, 30));
-  assert.equal(reconcile(early, at(0, 8, 31)).length, 1);
+  assert.equal(reconcile(early, at(0, 7, 33, 1)).length, 1);
+});
+
+test('a tap saved before seconds were recorded gets 3 minutes from its minute', () => {
+  const st = started({ goal: 420 });
+  st.history[dayKey(at(0, 0))] = { status: 'awake', t: 420, goal: 420 };
+  assert.equal(todayStatus(st, at(0, 7, 3)).kind, 'awake');
+  assert.equal(todayStatus(st, at(0, 7, 3, 1)).kind, 'closed');
 });
 
 test('an untapped setup day costs no freeze and no miss', () => {
@@ -193,6 +200,8 @@ test('a lapsed task on setup day costs nothing either', () => {
   const st = Object.assign(defaultState(), { goal: 540 });
   finishOnboarding(st, at(0, 6));
   tapAwake(st, at(0, 8));
+  assert.deepEqual(reconcile(st, at(0, 8, 4)), []);
+  assert.equal(todayStatus(st, at(0, 8, 4)).kind, 'notyet');
   assert.deepEqual(reconcile(st, at(0, 9, 1)), []);
   assert.equal(todayStatus(st, at(0, 9, 1)).kind, 'notyet');
   assert.equal(st.freezes, 1);

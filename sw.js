@@ -1,7 +1,7 @@
 // Offline support: every file the app needs is cached on install and served
 // from the cache first. Bump VERSION whenever a cached file changes.
-const VERSION = 'risewell-v20';
-// files-hash: 81d51d924f3cd830 risewell-v20 (written by npm run stamp)
+const VERSION = 'risewell-v22';
+// files-hash: 940730aaae8871c8 risewell-v22 (written by npm run stamp)
 const FILES = [
   './',
   'index.html',

@@ -3,7 +3,7 @@
 // times of day are minutes after midnight.
 
 export const EARLY_MINUTES = 120; // "I'm Awake" opens this long before the goal
-export const TASK_MINUTES = 60; // the tiny task must be done this long after the tap
+export const TASK_SECONDS = 180; // the tiny task must be done within 3 minutes of the tap
 export const MAX_FREEZES = 2;
 export const FREEZE_EVERY = 14; // earn a freeze at every 14-day multiple
 export const STREAK_BADGES = [7, 10, 14, 30, 50, 75, 100]; // then one every 100 days
@@ -66,6 +66,7 @@ export function addDays(k, n) {
 }
 export const weekday = (k) => (parseKey(k).getDay() + 6) % 7; // Monday = 0
 export const minutesOf = (d) => d.getHours() * 60 + d.getMinutes();
+export const secondsOf = (d) => minutesOf(d) * 60 + d.getSeconds();
 // A schedule edit made after today's window opened applies from tomorrow:
 // `st.lock` keeps today's schedule as it was before the edit.
 const scheduleFor = (st, k) => (k && st.lock && st.lock.day === k ? st.lock : st);
@@ -89,8 +90,9 @@ export function editSchedule(st, now, change) {
   return st;
 }
 
-// Last minute of the day the tiny task still counts for a tap at `rec.t`.
-export const taskDeadline = (rec) => Math.min(rec.t + TASK_MINUTES, 1439);
+// Last second of the day (after midnight) the tiny task still counts for a tap.
+// Taps saved before seconds were recorded only have the minute `t`.
+export const taskDeadline = (rec) => Math.min((rec.s ?? rec.t * 60) + TASK_SECONDS, 86399);
 
 export function formatTime(min) {
   min = ((min % 1440) + 1440) % 1440;
@@ -123,7 +125,7 @@ export function reconcile(st, now) {
     const rec = st.history[k];
     if (k === today) {
       // Today stays open until the window closes, or after a tap, until the task deadline.
-      const pending = rec?.status === 'awake' ? m <= taskDeadline(rec) : m <= windowOf(st, k).close;
+      const pending = rec?.status === 'awake' ? secondsOf(now) <= taskDeadline(rec) : m <= windowOf(st, k).close;
       if (pending) break;
     }
     if (isScheduled(st, k) && k !== st.setupDay) {
@@ -168,7 +170,7 @@ export function todayStatus(st, now) {
   if (r && r.status !== 'awake') return { ...base, kind: r.status, rec: r };
   if (r) {
     const due = taskDeadline(r);
-    return { ...base, kind: m <= due ? 'awake' : lapsed, rec: r, due };
+    return { ...base, kind: secondsOf(now) <= due ? 'awake' : lapsed, rec: r, due };
   }
   if (st.start && k < st.start) return { ...base, kind: 'notyet' };
   if (!isScheduled(st, k)) return { ...base, kind: 'off' };
@@ -183,13 +185,13 @@ export const taskFor = (st, k) => (st.todayTask && st.todayTask.day === k ? st.t
 export function tapAwake(st, now) {
   const s = todayStatus(st, now);
   if (s.kind !== 'open') return false;
-  st.history[s.day] = { status: 'awake', t: s.now, goal: scheduleFor(st, s.day).goal };
+  st.history[s.day] = { status: 'awake', t: s.now, s: secondsOf(now), goal: scheduleFor(st, s.day).goal };
   return true;
 }
 
 export function completeTask(st, now) {
   const k = dayKey(now), r = st.history[k];
-  if (!r || r.status !== 'awake' || minutesOf(now) > taskDeadline(r)) return null;
+  if (!r || r.status !== 'awake' || secondsOf(now) > taskDeadline(r)) return null;
   st.history[k] = { status: 'done', t: r.t, goal: r.goal, task: taskFor(st, k) };
   const streak = streakOf(st, k);
   st.longest = Math.max(st.longest, streak);
