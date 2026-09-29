@@ -1,6 +1,6 @@
 import {
   TASKS, badgeInfo, badgeList, defaultState, dayKey, addDays, parseKey, weekday, minutesOf, isScheduled, windowOf,
-  formatTime, finishOnboarding, editSchedule, reconcile, taskFor, streakOf, todayStatus, tapAwake, completeTask,
+  formatTime, finishOnboarding, editSchedule, reconcile, taskFor, secondsOf, TASK_SECONDS, streakOf, todayStatus, tapAwake, completeTask,
   nextStreakBadge, prevStreakBadge, insightsOf,
 } from './logic.js';
 
@@ -106,6 +106,7 @@ function show(id) {
   $$('.tab').forEach((t) => t.setAttribute('aria-current', String(t.dataset.tabGo === tab)));
   $$('.sheet').forEach((s) => { s.hidden = true; });
   if (id === 'streak') calMonth = null;
+  clearInterval(timerId);
   render();
   paintThemeColor();
 }
@@ -158,7 +159,7 @@ function render() {
   renderStreak(n, today, streak);
   renderStats(today);
   renderMe();
-  if (status.kind === 'awake') txt('tappedAt', `You tapped at ${formatTime(status.rec.t)}. Finish by ${formatTime(status.due)}.`);
+  if (current() === 'doing') runTimer();
 }
 
 function renderHome(n, today, s, streak) {
@@ -181,13 +182,13 @@ function renderHome(n, today, s, streak) {
       html = line(`Opens at ${formatTime(s.open)}, 2 hours before your goal`) + button('I’m Awake', 'disabled');
       break;
     case 'awake':
-      html = line(`Tapped at ${formatTime(s.rec.t)}. Finish by ${formatTime(s.due)} to count it.`) + `<button class="btn big" data-go="doing">${ic('check')}Finish your tiny task</button>`;
+      html = line(`Tapped at ${formatTime(s.rec.t)}. Finish by ${formatTime(Math.floor(s.due / 60))} to count it.`) + `<button class="btn big" data-go="doing">${ic('check')}Finish your tiny task</button>`;
       break;
     case 'done':
       html = card('check', 'good', 'Streak secured', `Up at ${formatTime(s.rec.t)}. See you ${nextWakeLabel(today).replace(/ at .*/, '').replace('Tomorrow', 'tomorrow')}.`);
       break;
     case 'freeze':
-      html = card('snow', 'cold', 'A freeze saved your streak', `You missed today’s window. Next wake: ${nextWakeLabel(today)}.`);
+      html = card('snow', 'cold', 'A freeze saved your streak', `Today didn’t count, so a freeze covered it. Next wake: ${nextWakeLabel(today)}.`);
       break;
     case 'miss': case 'closed':
       html = card('x', 'bad', 'Missed today', `Your streak restarts. Next wake: ${nextWakeLabel(today)}.`);
@@ -351,6 +352,40 @@ function renderCelebration() {
     rewards.push({ icon: 'medal', title: `${plural(target - r.streak, 'day')} to your ${target}-day badge`, sub: 'Wake up tomorrow to keep going.' });
   }
   $('#celextra').innerHTML = rewards.map((x) => `<div class="row"><div class="itile">${ic(x.icon)}</div><div class="grow"><p class="t-h3">${x.title}</p><p class="t-cap">${x.sub}</p></div></div>`).join('');
+}
+
+// ---------- tiny task countdown ----------
+// Three minutes from the tap. At zero the day is settled on the spot.
+let timerId = null;
+const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+function runTimer() {
+  clearInterval(timerId);
+  const step = () => {
+    const n = now(), s = todayStatus(st, n);
+    if (s.kind !== 'awake') return timeUp();
+    const left = Math.max(0, s.due - secondsOf(n));
+    $('#timerLeft').textContent = mmss(left);
+    $('#timerLeft').setAttribute('aria-label', `${mmss(left)} left`);
+    $('#timerBar').style.width = `${(left / TASK_SECONDS) * 100}%`;
+    $('#timer').classList.toggle('hurry', left <= 30);
+  };
+  $('#doneTask').hidden = false; $('#swapTask').hidden = false; $('#timeUpHome').hidden = true;
+  txt('tappedAt', 'Finish before time runs out.');
+  step();
+  timerId = setInterval(step, 250);
+}
+function timeUp() {
+  clearInterval(timerId);
+  if (reconcile(st, now()).length) save();
+  closeSheets();
+  const kind = todayStatus(st, now()).kind;
+  $('#timerLeft').textContent = '0:00';
+  $('#timerLeft').setAttribute('aria-label', 'Time is up');
+  $('#timerBar').style.width = '0%';
+  $('#timer').classList.add('hurry');
+  txt('tappedAt', kind === 'freeze' ? 'Time’s up. A freeze covered today.' : kind === 'notyet' ? 'Time’s up. Your streak starts tomorrow.' : 'Time’s up. Today is missed.');
+  $('#doneTask').hidden = true; $('#swapTask').hidden = true; $('#timeUpHome').hidden = false;
+  $('#timeUpHome').focus();
 }
 
 function confetti() {
@@ -535,7 +570,7 @@ document.addEventListener('click', (e) => {
     case 'awakeBtn': if (tapAwake(st, now())) { save(); go('doing'); } else render(); return;
     case 'doneTask': {
       const r = completeTask(st, now());
-      if (!r) { reset('home'); return toast('Your 60 minutes ran out.'); }
+      if (!r) { reset('home'); return toast('Your 3 minutes ran out.'); }
       save(); lastResult = r;
       replace('celebrate'); renderCelebration(); confetti(); chime();
       return;

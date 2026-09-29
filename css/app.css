@@ -69,6 +69,7 @@ h1,h2,h3,p{margin:0}
 .itile.bad{background:var(--bad-bg);color:var(--bad)}
 .bar{height:10px;border-radius:99px;background:var(--surface2);overflow:hidden}
 .bar>i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .6s ease}
+#timerBar{transition:width 1s linear}
 
 .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;padding:0 20px;border-radius:var(--r-ctl);background:var(--accent);color:var(--on-accent);font-weight:900;font-size:17px;box-shadow:0 4px 0 var(--accent-press);transition:transform .08s,box-shadow .08s}
 .btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-press)}
@@ -169,6 +170,12 @@ a.btn{text-decoration:none}
 .xlab span{flex:1;text-align:center}
 
 /* ---------- Tiny task ---------- */
+.timer{display:flex;flex-direction:column;align-items:center;gap:8px}
+.timer .bar{width:100%;max-width:240px}
+.timer.hurry #timerLeft{color:var(--bad)}
+.timer.hurry .bar>i{background:var(--bad)}
+.timer.hurry #timerLeft{animation:beat 1s ease-in-out infinite}
+@keyframes beat{50%{transform:scale(1.06)}}
 .bigico{width:128px;height:128px;border-radius:50%;background:var(--surface2);color:var(--accent-text);display:grid;place-items:center;align-self:center}
 .bigico .i{width:60px;height:60px;stroke-width:1.8}
 

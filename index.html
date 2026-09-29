@@ -150,7 +150,11 @@
 <section class="screen" id="doing">
   <div class="nav"><button class="iconbtn" data-back aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button><p class="t-head">Tiny task</p><span></span></div>
   <div class="mid">
-    <p class="t-cap center" data-bind="tappedAt">One step left.</p>
+    <div class="timer" id="timer">
+      <span class="t-display num" id="timerLeft" role="timer" aria-label="Time left">3:00</span>
+      <div class="bar" aria-hidden="true"><i id="timerBar" style="width:100%"></i></div>
+      <p class="t-cap center" id="timerMsg" aria-live="polite" data-bind="tappedAt">Finish before time runs out.</p>
+    </div>
     <div class="bigico"><svg class="i"><use data-today-icon href="#i-drop"/></svg></div>
     <div class="stack center" style="gap:8px;align-items:center">
       <h1 class="t-title" data-bind="todayname">Drink a glass of water</h1>
@@ -161,6 +165,7 @@
   <div class="foot">
     <button class="btn" id="doneTask"><svg class="i"><use href="#i-check"/></svg>Done</button>
     <button class="btn secondary" id="swapTask"><svg class="i"><use href="#i-swap"/></svg>Swap for another task</button>
+    <button class="btn" data-reset="home" id="timeUpHome" hidden>Back to Home</button>
   </div>
 </section>
 
